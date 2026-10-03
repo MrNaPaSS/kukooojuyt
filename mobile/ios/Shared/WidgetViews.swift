@@ -515,6 +515,16 @@ struct NotesWidgetView: View {
                         Caption(text: "\(notes.filter { $0.st == "done" }.count) из \(notes.count) сделано")
                     }
                     Spacer(minLength: 14)
+                    if notes.isEmpty {
+                        // Дел нет - так и сказать посередине, а не пустое полотно (проверка снимков 04.10.2026).
+                        VStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle").font(.system(size: 34, weight: .light))
+                                .foregroundStyle(DashTheme.money)
+                            Text("Дел нет").font(.system(size: 17, weight: .semibold)).foregroundStyle(DashTheme.ink)
+                            Text("Джарвис запишет, что напомнить").font(.system(size: 13)).foregroundStyle(DashTheme.label)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(Array(notes.prefix(7).enumerated()), id: \.offset) { _, n in
                             NoteRow(note: n, big: true)

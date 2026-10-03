@@ -148,14 +148,16 @@ struct DecisionCard: View {
 
     var body: some View {
         let tint = SpiritView.color(decision.agent)
+        let titleTint = decision.kind == "progress" && decision.stage == "fail" ? DashTheme.down
+            : decision.kind == "progress" && decision.stage == "done" ? DashTheme.money : tint
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 7) {
                 SpiritView(id: decision.agent, busy: true, size: 20)
-                Text(decision.title).font(.system(size: 14, weight: .bold)).foregroundStyle(tint)
+                Text(decision.title).font(.system(size: 14, weight: .bold)).foregroundStyle(titleTint)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
                 Image(systemName: DecisionCard.icon(decision))
-                    .font(.system(size: 15, weight: .bold)).foregroundStyle(tint)
+                    .font(.system(size: 15, weight: .bold)).foregroundStyle(titleTint)
             }
             if !decision.text.isEmpty {
                 Text(decision.text).font(.system(size: 13, weight: .medium)).foregroundStyle(DashTheme.ink)
@@ -305,10 +307,12 @@ struct TodoLine: View {
         if item.s == 1, let began = item.b {
             Text(timerInterval: began...began.addingTimeInterval(36_000), countsDown: false)
                 .font(.system(size: 12, weight: .semibold)).monospacedDigit().foregroundStyle(tint)
-                .frame(maxWidth: 52, alignment: .trailing)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 52, alignment: .trailing)
         } else if item.s == 2, let spent = item.d {
             Text(TodoLine.spent(spent))
                 .font(.system(size: 12, weight: .medium)).monospacedDigit().foregroundStyle(DashTheme.faint)
+                .frame(minWidth: 52, alignment: .trailing)
         }
     }
 
