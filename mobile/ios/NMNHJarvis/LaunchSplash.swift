@@ -70,7 +70,7 @@ struct LaunchSplash: View {
         let flash = t < T.strike ? 0 : t < T.flash ? (t - T.strike) / (T.flash - T.strike)
             : max(0, 1 - (t - T.flash) / 0.5)
         if flash > 0 {
-            let r = 40 + 160 * flash
+            let r = CGFloat(40 + 160 * flash)
             let rect = CGRect(x: center.x - r, y: center.y - r, width: r * 2, height: r * 2)
             ctx.fill(Path(ellipseIn: rect), with: .radialGradient(
                 Gradient(colors: [.white.opacity(0.9 * flash), SpiritView.color("jarvis").opacity(0.35 * flash), .clear]),
@@ -85,15 +85,15 @@ struct LaunchSplash: View {
         let island = CGPoint(x: size.width / 2, y: Self.islandY)
         if t >= T.appear && t < T.fly {
             // Появился во вспышке, повисел, взлетел и уменьшился в островок.
-            let pop = Self.back((t - T.appear) / 0.35)
-            let fly = Self.easeIn((t - T.hold) / (T.fly - T.hold))
-            let side = 92 * pop * (1 - fly) + 14 * fly
+            let pop = CGFloat(Self.back((t - T.appear) / 0.35))
+            let fly = CGFloat(Self.easeIn((t - T.hold) / (T.fly - T.hold)))
+            let side: CGFloat = 92 * pop * (1 - fly) + 14 * fly
             SpiritView(id: "jarvis", busy: true, size: max(1, side), phase: t)
                 .position(x: center.x, y: center.y + (island.y - center.y) * fly)
                 .opacity(t > T.fly - 0.08 ? 0 : 1)
         } else if t >= T.peekIn && t < T.end {
             // Выглядывает из-за правого края островка, машет, прячется.
-            let out = t < T.peekOut ? Self.ease((t - T.peekIn) / 0.3) : 1 - Self.easeIn((t - T.peekOut) / 0.3)
+            let out = CGFloat(t < T.peekOut ? Self.ease((t - T.peekIn) / 0.3) : 1 - Self.easeIn((t - T.peekOut) / 0.3))
             let waving = t >= T.wave && t < T.peekOut
             let tilt = waving ? sin((t - T.wave) * 16) * 16 : 0
             HStack(alignment: .top, spacing: -3) {
@@ -101,7 +101,7 @@ struct LaunchSplash: View {
                     .rotationEffect(.degrees(tilt), anchor: .bottom)
                 Hand(swing: waving ? sin((t - T.wave) * 16) : 0)
             }
-            .position(x: island.x + Self.islandHalf - 14 + 30 * out, y: island.y + 4)
+            .position(x: island.x + Self.islandHalf - CGFloat(14) + CGFloat(30) * out, y: island.y + CGFloat(4))
         }
     }
 
@@ -164,8 +164,8 @@ struct Bolt {
         var p = Path()
         p.move(to: from)
         for k in 1...max(1, min(shown, steps)) {
-            let f = Double(k) / Double(steps)
-            let swing = k < steps ? jitter[k - 1] * length * 0.06 : 0
+            let f = CGFloat(k) / CGFloat(steps)
+            let swing: CGFloat = k < steps ? CGFloat(jitter[k - 1]) * length * 0.06 : 0
             p.addLine(to: CGPoint(x: from.x + dx * f + normal.x * swing, y: from.y + dy * f + normal.y * swing))
         }
         return p
