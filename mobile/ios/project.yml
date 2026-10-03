@@ -1,0 +1,94 @@
+# Проект Xcode описан текстом и собирается XcodeGen на облачном Mac (.github/workflows/ios.yml):
+# своего Mac у владельца нет. ТЗ: docs/tz/glasses-ios-app-tz.md.
+name: NMNHJarvis
+options:
+  bundleIdPrefix: trade.nmnh
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    JARVIS_COMMIT: dev
+targets:
+  NMNHJarvis:
+    type: application
+    platform: iOS
+    sources: [NMNHJarvis, Shared]
+    dependencies:
+      - target: JarvisIsland
+    info:
+      path: NMNHJarvis/Info.plist
+      properties:
+        # Латиницей: Apple (через AltServer) не принимает кириллицу в названии;
+        # на русском iPhone - «Джарвис» из ru.lproj/InfoPlist.strings.
+        CFBundleDisplayName: Jarvis
+        CFBundleDevelopmentRegion: ru
+        CFBundleLocalizations: [ru, en]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        JarvisCommit: $(JARVIS_COMMIT)
+        UILaunchScreen:
+          UIColorName: ""
+        UIBackgroundModes: [audio]
+        NSMicrophoneUsageDescription: Voice for Jarvis - recording from the glasses or phone microphone.
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        NSSupportsLiveActivities: true
+        # jarvis://plan?agent=server - касание островка открывает план агента (PlanSheet.swift).
+        CFBundleURLTypes:
+          - CFBundleURLName: trade.nmnh.jarvis
+            CFBundleURLSchemes: [jarvis]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: trade.nmnh.jarvis
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_ENTITLEMENTS: NMNHJarvis/NMNHJarvis.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  JarvisIsland:
+    type: app-extension
+    platform: iOS
+    sources: [JarvisIsland, Shared]
+    info:
+      path: JarvisIsland/Info.plist
+      properties:
+        CFBundleDisplayName: Jarvis Island
+        CFBundleDevelopmentRegion: ru
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: trade.nmnh.jarvis.island
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) WIDGET
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_ENTITLEMENTS: JarvisIsland/JarvisIsland.entitlements
+  NMNHJarvisUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [NMNHJarvisUITests]
+    dependencies:
+      - target: NMNHJarvis
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: NMNHJarvis
+  NMNHJarvisTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [NMNHJarvisTests]
+    dependencies:
+      - target: NMNHJarvis
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  NMNHJarvis:
+    build:
+      targets:
+        NMNHJarvis: all
+    test:
+      targets: [NMNHJarvisTests, NMNHJarvisUITests]
