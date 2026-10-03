@@ -45,6 +45,42 @@ final class IslandShotsTests: XCTestCase {
         save("d3-plan-empty")
     }
 
+    /// Решение владельца первым: выкладка, вопрос, ход выкладки, сбой - в островке.
+    func testDecisionScenes() throws {
+        tap("demo-working")
+        for (i, scene) in ["deploy", "choice", "progress", "fail"].enumerated() {
+            tap("demo-\(scene)")
+            islandShots("e\(i + 1)-\(scene)")
+        }
+        tap("demo-nodecision")
+    }
+
+    /// Экран блокировки во всех сценах (та же вёрстка, что у Live Activity на замке).
+    func testLockGallery() throws {
+        tap("demo-lock")
+        sleep(2)
+        for i in 1...4 {
+            save(String(format: "f%02d-lock", i))
+            app.swipeUp(velocity: .slow)
+            sleep(1)
+        }
+    }
+
+    /// Заставка: молнии, дух в центре, полёт в островок, выглядывает и машет.
+    func testSplash() throws {
+        tap("demo-splash")
+        for (i, wait) in [0.3, 0.9, 0.9, 1.0].enumerated() {
+            Thread.sleep(forTimeInterval: wait)
+            save("g\(i + 1)-splash")
+        }
+    }
+
+    func testConnectSheet() throws {
+        tap("demo-connect")
+        sleep(2)
+        save("h1-connect")
+    }
+
     func testWidgetGallery() throws {
         tap("demo-widgets")
         sleep(2)

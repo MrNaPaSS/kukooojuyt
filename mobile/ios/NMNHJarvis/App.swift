@@ -9,6 +9,7 @@ import WebKit
 @main
 struct NMNHJarvisApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate  // уведомления с кнопками
+    @StateObject private var theme = PageTheme.shared
     @State private var splash = true  // заставка - один раз за запуск
 
     var body: some Scene {
@@ -17,9 +18,13 @@ struct NMNHJarvisApp: App {
                 DemoView()  // облачный симулятор: скриншоты островка без сервера
             } else {
                 ZStack {
+                    // Во весь экран, под часами и островком тоже (владелец 03.10.2026: сверху была тёмная
+                    // полоса). Страница сама отступает от них (env(safe-area-inset-top)), фон и цвет часов -
+                    // по её теме: на белой странице часы тёмные.
                     WebShell(url: URL(string: "https://www.nmnh.trade/admin/voice")!)
-                        .ignoresSafeArea(edges: .bottom)
-                        .background(Color.black)
+                        .ignoresSafeArea()
+                        .background(theme.light ? Color.white : Color.black)
+                        .preferredColorScheme(theme.light ? .light : .dark)
                         .planSheet()  // касание островка - план агента (jarvis://plan?agent=...)
                         .pairSheet()  // QR с ПК - вход без пароля (jarvis://pair?code=...)
                     if splash { LaunchSplash(shown: $splash) }  // молния и дух в островок (03.10.2026)
@@ -28,6 +33,13 @@ struct NMNHJarvisApp: App {
             }
         }
     }
+}
+
+/// Тема страницы голоса: она шлёт {cmd: "theme", light: true/false} при загрузке и переключении.
+@MainActor
+final class PageTheme: ObservableObject {
+    static let shared = PageTheme()
+    @Published var light = false
 }
 
 struct WebShell: UIViewRepresentable {
@@ -47,8 +59,10 @@ struct WebShell: UIViewRepresentable {
         let view = WKWebView(frame: .zero, configuration: config)
         view.uiDelegate = context.coordinator
         view.isOpaque = false
-        view.backgroundColor = .black
-        view.scrollView.backgroundColor = .black
+        view.backgroundColor = .clear  // под страницей - фон окна по её теме (PageTheme)
+        view.scrollView.backgroundColor = .clear
+        // Отступ от часов и островка делает сама страница; иначе iOS добавит свой, и сверху снова полоса.
+        view.scrollView.contentInsetAdjustmentBehavior = .never
         view.allowsBackForwardNavigationGestures = true
         context.coordinator.webView = view
         view.load(URLRequest(url: url))
@@ -115,6 +129,8 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKUIDelegate {
                 voice.speakAgents = body["on"] as? Bool ?? false
             case "hold":
                 voice.hold(body["agent"] as? String ?? "jarvis", down: body["down"] as? Bool ?? false)
+            case "theme":
+                PageTheme.shared.light = body["light"] as? Bool ?? false
             case "tokens":
                 if voice.enabled, let raw = body["api"] as? String, let base = URL(string: raw.hasSuffix("/") ? raw : raw + "/"),
                    let token = body["token"] as? String {

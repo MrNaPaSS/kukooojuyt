@@ -8,6 +8,9 @@ struct DemoView: View {
     @State private var mode: IslandAttributes.Mode = .quiet
     @State private var page: DashPage = .agents
     @State private var gallery = false
+    @State private var lockGallery = false
+    @State private var splash = false
+    @State private var decision: IslandAttributes.Decision?
     @State private var start = Date()
 
     var body: some View {
@@ -33,6 +36,13 @@ struct DemoView: View {
                     ForEach(DashPage.allCases, id: \.rawValue) { item in
                         chip(item.title, on: page == item, id: "page-\(item.rawValue)") { page = item; show() }
                     }
+                    section("Решение владельца")
+                    ForEach(Self.decisions, id: \.0) { item in
+                        chip(item.1, on: decision?.key == item.2?.key, id: "demo-\(item.0)") { decision = item.2; show() }
+                    }
+                    chip("Экран блокировки - все сцены", on: false, id: "demo-lock") { lockGallery = true }
+                    chip("Заставка", on: false, id: "demo-splash") { splash = true }
+                    chip("Окно подключения", on: false, id: "demo-connect") { Pairing.shared.phase = .guide }
                     chip("Виджеты", on: false, id: "demo-widgets") { gallery = true }
                     chip("План агента (касание островка)", on: false, id: "demo-plan") { openPlan() }
                 }
@@ -41,9 +51,12 @@ struct DemoView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black)
         }
+        .overlay { if splash { LaunchSplash(shown: $splash) } }
         .onAppear { show() }
         .fullScreenCover(isPresented: $gallery) { WidgetGallery(close: { gallery = false }) }
+        .fullScreenCover(isPresented: $lockGallery) { LockGallery(close: { lockGallery = false }) }
         .planSheet()
+        .pairSheet()
     }
 
     static let modes: [(IslandAttributes.Mode, String)] = [
@@ -94,8 +107,26 @@ struct DemoView: View {
     }
 
     private func show() {
-        IslandController.shared.show(Self.state(mode, page: page), force: true)
+        var state = Self.state(mode, page: page)
+        state.decision = decision
+        IslandController.shared.show(state, force: true)
     }
+
+    /// Решения для снимков: выкладка с кнопками, вопрос, ход выкладки, сбой.
+    static let decisions: [(String, String, IslandAttributes.Decision?)] = [
+        ("nodecision", "Без решения", nil),
+        ("deploy", "Просит выложить", .init(kind: "deploy", id: "deploy", agent: "server", title: "Server PC просит выложить правку",
+                                           text: "fix(ios): страница голоса во весь экран; feat(pair): вход по QR",
+                                           options: ["Выложить", "Отклонить"], simple: true)),
+        ("choice", "Вопрос с вариантами", .init(kind: "choice", id: "7", agent: "pc", title: "Local PC спрашивает",
+                                              text: "Какой цвет у Server 2 в островке?",
+                                              options: ["Зелёный", "Жёлтый", "Бирюзовый"], simple: true)),
+        ("progress", "Выкладка идёт", .init(kind: "progress", id: "deploy", agent: "server", title: "Выкладка: идут тесты",
+                                          text: "", options: [], simple: false, stage: "tests")),
+        ("fail", "Выкладка упала", .init(kind: "progress", id: "deploy", agent: "server", title: "Не выложено",
+                                       text: "Не выложил: правки агента конфликтуют с рабочей версией.",
+                                       options: [], simple: false, stage: "fail", failedAt: "start")),
+    ]
 
     static func state(_ mode: IslandAttributes.Mode, page: DashPage = .agents) -> IslandAttributes.ContentState {
         let now = Date()
@@ -122,6 +153,50 @@ struct DemoView: View {
                                              line: IslandBuilder.line(mode: mode, spirits: spirits, said: said),
                                              page: page, dash: .sample, recFor: "server",
                                              levels: mode == .recording ? [0.15, 0.4, 0.75, 0.55, 0.9, 0.6, 0.3, 0.7, 0.95, 0.5, 0.35, 0.6] : [])
+    }
+}
+
+/// Экран блокировки во всех сценах подряд: Live Activity на замке - это IslandMetrics в карточке
+/// шириной экрана (LockCard). Симулятор замок не снимает, поэтому та же вёрстка - здесь.
+struct LockGallery: View {
+    let close: () -> Void
+
+    private var scenes: [(String, IslandAttributes.ContentState)] {
+        var out: [(String, IslandAttributes.ContentState)] = [
+            ("Тихо - метрики", DemoView.state(.quiet)),
+            ("Агент работает - план", DemoView.state(.working)),
+            ("Джарвис говорит", DemoView.state(.speaking)),
+        ]
+        for item in DemoView.decisions.dropFirst() {
+            var state = DemoView.state(.working)
+            state.decision = item.2
+            out.append((item.1, state))
+        }
+        return out
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text("Экран блокировки").font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
+                    Spacer()
+                    Button("Закрыть", action: close).accessibilityIdentifier("lock-close").foregroundStyle(.white)
+                }
+                ForEach(Array(scenes.enumerated()), id: \.offset) { _, scene in
+                    Text(scene.0).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.6))
+                    IslandMetrics(state: scene.1)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(DashTheme.base.opacity(0.55)))
+                        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(.ultraThinMaterial))
+                }
+            }
+            .padding(12)
+        }
+        .background(LinearGradient(colors: [Color(red: 0.18, green: 0.22, blue: 0.42), Color(red: 0.05, green: 0.05, blue: 0.12)],
+                                   startPoint: .top, endPoint: .bottom).ignoresSafeArea())
     }
 }
 
