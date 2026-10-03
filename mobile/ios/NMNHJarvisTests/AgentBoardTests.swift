@@ -57,8 +57,8 @@ final class AgentBoardTests: XCTestCase {
     }
 
     func testPairLinkParsed() {
-        let link = Pairing.parse(URL(string: "jarvis://pair?code=AB12-CD&api=https://api.example.com")!)
-        XCTAssertEqual(link?.code, "AB12-CD")
+        let link = Pairing.parse(URL(string: "jarvis://pair?code=AB12-CD_x9&api=https%3A%2F%2Fapi.example.com")!)
+        XCTAssertEqual(link?.code, "AB12-CD_x9")
         XCTAssertEqual(link?.api?.host, "api.example.com")
         XCTAssertNil(Pairing.parse(URL(string: "jarvis://plan?agent=pc")!))
         XCTAssertNil(Pairing.parse(URL(string: "jarvis://pair?code=x'%3B")!)?.code)  // мусор - не код

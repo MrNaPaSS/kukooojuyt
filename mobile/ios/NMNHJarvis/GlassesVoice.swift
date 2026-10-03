@@ -600,10 +600,28 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         guard let api else { return }
         do {
             let text = try await api.decide(kind: kind, id: id, pick: pick)
-            decision = nil
-            Notifier.shared.show(nil)
+            // «Выложить» - сразу шаги выкладки; при включённом опросе они пойдут дальше сами.
+            // Без опроса (режим очков выключен) - просто снять карточку: иначе «заявка» висела бы вечно.
+            let next: IslandAttributes.Decision? = kind == "deploy" && pick == 0 && enabled
+                ? .init(kind: "progress", id: "deploy", agent: "server", title: "Выкладка: заявка принята",
+                        text: "", options: [], simple: false, stage: "queued")
+                : nil
+            decision = next
+            Notifier.shared.clear()
+            IslandController.shared.patch { state in
+                state.decision = next
+                state.done = String(text.prefix(60))
+                state.doneOK = true
+            }
             flashDone(text, ok: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                IslandController.shared.patch { $0.done = "" }
+            }
         } catch {
+            IslandController.shared.patch { state in
+                state.done = "Не отправилось: сервер не отвечает"
+                state.doneOK = false
+            }
             flashDone("Не отправилось: сервер не отвечает", ok: false)
         }
     }

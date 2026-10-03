@@ -98,6 +98,15 @@ final class IslandController {
         }
     }
 
+    /// Поменять одно поле в том, что островок показывает сейчас, - даже когда режим очков выключен
+    /// и опроса нет (владелец 04.10.2026: ответил на решение с замка - карточка так и висела).
+    func patch(_ change: (inout IslandAttributes.ContentState) -> Void) {
+        let alive = activity ?? Activity<IslandAttributes>.activities.first
+        guard var state = last ?? alive?.content.state else { return }
+        change(&state)
+        show(state, force: true)
+    }
+
     func end() {
         queued = nil
         guard let activity else { return }

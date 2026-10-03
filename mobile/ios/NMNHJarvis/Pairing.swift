@@ -43,7 +43,7 @@ final class Pairing: ObservableObject {
         let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         let code = items.first { $0.name == "code" }?.value.flatMap { value -> String? in
             let clean = value.trimmingCharacters(in: .whitespaces)
-            return clean.count >= 4 && clean.count <= 64 && clean.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" })
+            return clean.count >= 4 && clean.count <= 64 && clean.allSatisfy({ ($0.isASCII && ($0.isLetter || $0.isNumber)) || $0 == "-" || $0 == "_" })
                 ? clean : nil
         }
         let api = items.first { $0.name == "api" }?.value.flatMap(URL.init(string:))
@@ -68,7 +68,7 @@ final class Pairing: ObservableObject {
             let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
             guard status == 200, let access = body["access_token"] as? String,
                   let refresh = body["refresh_token"] as? String else {
-                phase = .failed(status == 404 || status == 410 ? "Код устарел или уже использован. Покажите на ПК новый QR."
+                phase = .failed(status == 400 || status == 404 || status == 410 ? "Код устарел или уже использован. Покажите на ПК новый QR."
                                 : "Сервер не принял код (\(status)). Попробуйте новый QR.")
                 return
             }

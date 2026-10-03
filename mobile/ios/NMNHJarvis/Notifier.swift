@@ -61,6 +61,13 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// Ответили на решение - его уведомление убрать сразу. Без проверки «что показывали»: приложение
+    /// могло подняться ради одной кнопки, и в памяти пусто, а уведомление висит.
+    func clear() {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["decision"])
+        shownDecision = ""
+    }
+
     /// Агент закончил работу - короткое уведомление без кнопок.
     func finished(agent: String, step: String) {
         let content = UNMutableNotificationContent()
