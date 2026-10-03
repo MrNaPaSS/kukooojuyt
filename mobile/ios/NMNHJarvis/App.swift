@@ -9,16 +9,22 @@ import WebKit
 @main
 struct NMNHJarvisApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate  // уведомления с кнопками
+    @State private var splash = true  // заставка - один раз за запуск
 
     var body: some Scene {
         WindowGroup {
             if ProcessInfo.processInfo.arguments.contains("-demo") {
                 DemoView()  // облачный симулятор: скриншоты островка без сервера
             } else {
-                WebShell(url: URL(string: "https://www.nmnh.trade/admin/voice")!)
-                    .ignoresSafeArea(edges: .bottom)
-                    .background(Color.black)
-                    .planSheet()  // касание островка - план агента (jarvis://plan?agent=...)
+                ZStack {
+                    WebShell(url: URL(string: "https://www.nmnh.trade/admin/voice")!)
+                        .ignoresSafeArea(edges: .bottom)
+                        .background(Color.black)
+                        .planSheet()  // касание островка - план агента (jarvis://plan?agent=...)
+                        .pairSheet()  // QR с ПК - вход без пароля (jarvis://pair?code=...)
+                    if splash { LaunchSplash(shown: $splash) }  // молния и дух в островок (03.10.2026)
+                }
+                .onChange(of: splash) { _, on in if !on { Pairing.shared.firstRun() } }
             }
         }
     }
@@ -64,6 +70,13 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKUIDelegate {
         super.init()
         Task { @MainActor in
             GlassesVoice.shared.onState = { [weak self] state, error in self?.push(state, error) }
+            // Вход по QR: токены админа - в хранилище страницы, как после входа паролем.
+            Pairing.shared.deliver = { [weak self] access, refresh in
+                let pair = (try? JSONSerialization.data(withJSONObject: [access, refresh]))
+                    .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+                self?.webView?.evaluateJavaScript(
+                    "(function(t){localStorage.setItem('nmnh_mentor',t[0]);localStorage.setItem('nmnh_mentor_refresh',t[1]);location.reload();})(\(pair))")
+            }
             IslandController.shared.onProblem = { [weak self] text in
                 let safe = text.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "\"", with: "'")
                 self?.webView?.evaluateJavaScript("window.nmnhIsland && window.nmnhIsland(\"\(safe)\")")

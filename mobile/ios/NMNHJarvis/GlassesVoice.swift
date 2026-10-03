@@ -562,14 +562,32 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         decision = next
         Notifier.shared.show(next)
         if fresh { refreshIsland(alert: true) }
+        // Озвучка событий (владелец 03.10.2026: «уведомления о всех событиях с озвучкой»): решение
+        // и итог выкладки звучат голосом агента; заглушённый на телефоне - только текстом.
+        if fresh, seenJarvis >= 0, let d = next, let line = Self.voiceLine(d), !muted.contains(d.agent) {
+            speak(line, by: d.agent)
+        }
         let busy = Set(spirits.filter(\.busy).map(\.id))
         if seenJarvis >= 0 {  // первый опрос - только запомнить
             for id in busyWere.subtracting(busy) where id != "jarvis" && !muted.contains(id) {
                 let plan = AgentBoard.shared.plans[id]
                 Notifier.shared.finished(agent: id, step: plan?.name ?? "")
+                // Его итоговую реплику и так читает озвучка ответов; без неё - коротко здесь.
+                if !speakAgents { speak("\(GlassesAgents.name(id)) закончил работу.", by: id) }
             }
         }
         busyWere = busy
+    }
+
+    /// Что сказать о решении: вопрос и выкладка - всегда, ход выкладки - только итог.
+    static func voiceLine(_ d: IslandAttributes.Decision) -> String? {
+        switch d.kind {
+        case "deploy": return "\(d.title). Выложить?"
+        case "choice": return "\(d.title). \(d.text)"
+        case "progress" where d.stage == "done": return "Выложено."
+        case "progress" where d.stage == "fail": return "Выкладка не прошла. \(d.text)"
+        default: return nil
+        }
     }
 
     /// Кнопка решения в островке, на замке или в уведомлении. Работает и когда режим очков

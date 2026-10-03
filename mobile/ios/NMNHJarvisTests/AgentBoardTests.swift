@@ -56,6 +56,24 @@ final class AgentBoardTests: XCTestCase {
         XCTAssertNil(IslandBuilder.decision(from: [:]))
     }
 
+    func testPairLinkParsed() {
+        let link = Pairing.parse(URL(string: "jarvis://pair?code=AB12-CD&api=https://api.example.com")!)
+        XCTAssertEqual(link?.code, "AB12-CD")
+        XCTAssertEqual(link?.api?.host, "api.example.com")
+        XCTAssertNil(Pairing.parse(URL(string: "jarvis://plan?agent=pc")!))
+        XCTAssertNil(Pairing.parse(URL(string: "jarvis://pair?code=x'%3B")!)?.code)  // мусор - не код
+        XCTAssertNil(Pairing.parse(URL(string: "jarvis://pair?code=ABCD&api=http://evil")!)?.api)  // только https
+    }
+
+    @MainActor func testDecisionVoiceLine() {
+        let base = IslandAttributes.Decision(kind: "progress", id: "deploy", agent: "server", title: "Выкладка: идут тесты",
+                                             text: "", options: [], simple: false, stage: "tests")
+        XCTAssertNil(GlassesVoice.voiceLine(base))  // ход - молча, только итог
+        var done = base
+        done.stage = "done"
+        XCTAssertEqual(GlassesVoice.voiceLine(done), "Выложено.")
+    }
+
     func testDeployProgressStep() {
         let state: [String: Any] = ["decision": ["kind": "progress", "id": "deploy", "agent": "server",
                                                  "title": "Выкладка: идут тесты", "text": "", "options": [],
