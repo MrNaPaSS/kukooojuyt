@@ -22,7 +22,7 @@ struct JarvisIslandBundle: WidgetBundle {
 struct JarvisIslandWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: IslandAttributes.self) { context in
-            LockCard(state: context.state)
+            LockCard(state: context.state, stale: context.isStale)
                 .padding(14)
                 .widgetURL(planURL(context.state.spirits))
                 .activityBackgroundTint(DashTheme.base.opacity(0.45))  // сквозь подложку видно размытые обои
@@ -31,13 +31,13 @@ struct JarvisIslandWidget: Widget {
             let s = context.state
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
-                    IslandMetrics(state: s)  // агенты-кнопки, сервер, сторож - без прибыли (владелец)
+                    IslandMetrics(state: s, stale: context.isStale)  // агенты-кнопки, сервер, сторож - без прибыли
                         .padding(.horizontal, 6).padding(.bottom, 2)
                 }
             } compactLeading: {
                 if !quiet(s) { Compact(state: s) }  // тихо - островок как обычный, без наших значков
             } compactTrailing: {
-                if let d = s.decision {  // ждёт решения - знак вопроса цвета агента, раскрыть - кнопки
+                if let d = s.decision, !(context.isStale && d.kind == "progress") {  // ждёт решения - знак вопроса цвета агента, раскрыть - кнопки
                     Image(systemName: DecisionCard.icon(d))
                         .foregroundStyle(SpiritView.color(d.agent))
                 } else if !quiet(s) {
@@ -120,7 +120,8 @@ private struct Trailing: View {
 /// Экран блокировки: та же карточка агента и духи всех троих.
 private struct LockCard: View {
     let state: IslandAttributes.ContentState
+    var stale = false
     var body: some View {
-        IslandMetrics(state: state)
+        IslandMetrics(state: state, stale: stale)
     }
 }

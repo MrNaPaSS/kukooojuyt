@@ -567,6 +567,14 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         if fresh, seenJarvis >= 0, let d = next, let line = Self.voiceLine(d), !muted.contains(d.agent) {
             speak(line, by: d.agent)
         }
+        if fresh, let d = next, d.kind == "progress", ["done", "fail"].contains(d.stage ?? "") {
+            let key = d.key
+            DispatchQueue.main.asyncAfter(deadline: .now() + (d.stage == "done" ? 10 : 90)) { [weak self] in
+                guard let self, self.decision?.key == key else { return }
+                self.decision = nil
+                IslandController.shared.patch { $0.decision = nil }
+            }
+        }
         let busy = Set(spirits.filter(\.busy).map(\.id))
         if seenJarvis >= 0 {  // первый опрос - только запомнить
             for id in busyWere.subtracting(busy) where id != "jarvis" && !muted.contains(id) {

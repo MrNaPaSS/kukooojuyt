@@ -54,7 +54,12 @@ final class IslandController {
         }
         last = state
         lastAt = now
-        let content = ActivityContent(state: state, staleDate: now.addingTimeInterval(15 * 60))
+        // Итог выкладки - устаревает через 90 с: островок сам уберёт его, даже если приложение
+        // после этого не обновит Live Activity (режим очков выключен; владелец 04.10.2026).
+        // Успех - 10 с, упала - 90 с (прочитать причину).
+        let stage = state.decision?.kind == "progress" ? state.decision?.stage ?? "" : ""
+        let keep: TimeInterval = stage == "done" ? 10 : stage == "fail" ? 90 : 15 * 60
+        let content = ActivityContent(state: state, staleDate: now.addingTimeInterval(keep))
         // После перезапуска приложения старая Live Activity ещё висит - берём её, лишние закрываем
         // (иначе островок показывал прежнюю, а обновлялась новая; снимки 02.10.2026).
         if activity == nil {

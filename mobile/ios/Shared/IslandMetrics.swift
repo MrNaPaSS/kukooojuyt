@@ -8,6 +8,7 @@ import SwiftUI
 ///      во время записи вместо него - полоски голоса, когда кто-то говорит - его фраза.
 struct IslandMetrics: View {
     let state: IslandAttributes.ContentState
+    var stale = false  // Live Activity устарела (staleDate прошёл) - итог выкладки больше не показываем
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -18,7 +19,7 @@ struct IslandMetrics: View {
             // Решение владельца важнее всего, кроме идущей записи (владелец 03.10.2026: «на
             // экране блокировки либо вопросы выбора, либо подтвердить выкладку, а то всегда
             // текущее действие агентов, если ничего - обычные метрики»).
-            if let d = state.decision, state.mode != .recording {
+            if let d = state.decision, state.mode != .recording, !(stale && d.kind == "progress") {
                 DecisionCard(decision: d)
             } else if state.mode == .working, let busy = worker {
                 WorkCard(spirit: busy)
