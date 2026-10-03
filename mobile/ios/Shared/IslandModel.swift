@@ -29,9 +29,23 @@ struct IslandAttributes: ActivityAttributes {
         var text: String
         var options: [String]
         var simple: Bool
+        var stage: String? = nil     // kind progress: queued, start, tests, push, restart, done, fail
+        var failedAt: String? = nil  // на каком шаге встала выкладка
+
+        /// Шаги выкладки по порядку - как их отмечает сервер (pult_deploystate).
+        static let steps: [(id: String, label: String)] = [
+            ("queued", "Заявка"), ("start", "Проверка"), ("tests", "Тесты"),
+            ("push", "В main"), ("restart", "Запуск"), ("done", "Готово"),
+        ]
+
+        /// Номер текущего шага; у упавшей - шаг, где встала.
+        var stepIndex: Int {
+            let at = stage == "fail" ? (failedAt?.isEmpty == false ? failedAt! : "start") : (stage ?? "queued")
+            return Self.steps.firstIndex { $0.id == at } ?? 0
+        }
 
         /// Ключ для «уже показали уведомление»: новое решение - новый ключ.
-        var key: String { "\(kind)|\(id)|\(text.prefix(40))" }
+        var key: String { "\(kind)|\(id)|\(stage ?? "")|\(text.prefix(40))" }
     }
 
     enum Mode: String, Codable, Hashable {
@@ -128,7 +142,8 @@ enum IslandBuilder {
             kind: kind, id: id, agent: d["agent"] as? String ?? "pc",
             title: String((d["title"] as? String ?? "").prefix(60)),
             text: String((d["text"] as? String ?? "").prefix(160)),
-            options: options, simple: (d["simple"] as? Bool ?? false) && !options.isEmpty)
+            options: options, simple: (d["simple"] as? Bool ?? false) && !options.isEmpty,
+            stage: d["stage"] as? String, failedAt: d["failed_at"] as? String)
     }
 
     /// Последнее действие агента в ленте (строка «do»); у записей без агента - Claude Code на ПК.

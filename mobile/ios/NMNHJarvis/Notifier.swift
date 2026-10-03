@@ -37,6 +37,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             }
             return
         }
+        if decision.kind == "progress", !["done", "fail"].contains(decision.stage ?? "") {
+            // Выкладка идёт - её видно в островке; уведомление «нажмите выложить» убрать.
+            center.removeDeliveredNotifications(withIdentifiers: ["decision"])
+            shownDecision = ""
+            return
+        }
         guard decision.key != shownDecision else { return }
         shownDecision = decision.key
         let category = Self.category(for: decision)

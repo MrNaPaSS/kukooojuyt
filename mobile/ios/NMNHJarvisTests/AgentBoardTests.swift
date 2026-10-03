@@ -56,6 +56,15 @@ final class AgentBoardTests: XCTestCase {
         XCTAssertNil(IslandBuilder.decision(from: [:]))
     }
 
+    func testDeployProgressStep() {
+        let state: [String: Any] = ["decision": ["kind": "progress", "id": "deploy", "agent": "server",
+                                                 "title": "Выкладка: идут тесты", "text": "", "options": [],
+                                                 "simple": false, "stage": "fail", "failed_at": "tests"]]
+        let d = IslandBuilder.decision(from: state)
+        XCTAssertEqual(d?.stepIndex, 2)
+        XCTAssertEqual(d?.simple, false)
+    }
+
     /// Время шага доезжает с сервера: у готового - сколько занял, у текущего - когда взяли.
     func testIslandStepsCarryTheirTime() {
         let now = Date(timeIntervalSince1970: 2_000)

@@ -135,6 +135,16 @@ struct WorkCard: View {
 struct DecisionCard: View {
     let decision: IslandAttributes.Decision
 
+    static func icon(_ d: IslandAttributes.Decision) -> String {
+        switch (d.kind, d.stage) {
+        case ("progress", "done"): return "checkmark.circle.fill"
+        case ("progress", "fail"): return "xmark.circle.fill"
+        case ("progress", _): return "arrow.triangle.2.circlepath"
+        case ("deploy", _): return "arrow.up.circle.fill"
+        default: return "questionmark.circle.fill"
+        }
+    }
+
     var body: some View {
         let tint = SpiritView.color(decision.agent)
         VStack(alignment: .leading, spacing: 7) {
@@ -143,12 +153,17 @@ struct DecisionCard: View {
                 Text(decision.title).font(.system(size: 14, weight: .bold)).foregroundStyle(tint)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
-                Image(systemName: decision.kind == "deploy" ? "arrow.up.circle.fill" : "questionmark.circle.fill")
+                Image(systemName: DecisionCard.icon(decision))
                     .font(.system(size: 15, weight: .bold)).foregroundStyle(tint)
             }
-            Text(decision.text).font(.system(size: 13, weight: .medium)).foregroundStyle(DashTheme.ink)
-                .lineLimit(2)
-            if decision.simple {
+            if !decision.text.isEmpty {
+                Text(decision.text).font(.system(size: 13, weight: .medium)).foregroundStyle(DashTheme.ink)
+                    .lineLimit(2)
+            }
+            if decision.kind == "progress" {
+                // После «Выложить» кнопок нет - ход выкладки (владелец 03.10.2026).
+                DeploySteps(decision: decision)
+            } else if decision.simple {
                 HStack(spacing: 6) {
                     ForEach(Array(decision.options.enumerated()), id: \.offset) { index, label in
                         Button(intent: DecideIntent(kind: decision.kind, id: decision.id, pick: index)) {
@@ -166,6 +181,37 @@ struct DecisionCard: View {
                     Text("Открыть и ответить").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.black)
                         .padding(.vertical, 7).frame(maxWidth: .infinity).background(Capsule().fill(tint))
                 }
+            }
+        }
+    }
+}
+
+/// Ход выкладки точками: готовые зелёные, текущий - цвет агента, упавший - красный.
+struct DeploySteps: View {
+    let decision: IslandAttributes.Decision
+
+    var body: some View {
+        let current = decision.stepIndex
+        let done = decision.stage == "done"
+        let failed = decision.stage == "fail"
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(Array(IslandAttributes.Decision.steps.enumerated()), id: \.offset) { index, step in
+                let passed = done || index < current
+                let now = !done && index == current
+                VStack(spacing: 3) {
+                    ZStack {
+                        Circle().fill(failed && now ? DashTheme.down : passed ? DashTheme.money
+                                      : now ? SpiritView.color(decision.agent) : Color.white.opacity(0.15))
+                            .frame(width: 14, height: 14)
+                        if passed || (failed && now) {
+                            Image(systemName: failed && now ? "xmark" : "checkmark")
+                                .font(.system(size: 7, weight: .black)).foregroundStyle(Color.black)
+                        }
+                    }
+                    Text(step.label).font(.system(size: 10, weight: now ? .bold : .medium))
+                        .foregroundStyle(now ? DashTheme.ink : DashTheme.label).lineLimit(1).minimumScaleFactor(0.8)
+                }
+                .frame(maxWidth: .infinity)
             }
         }
     }

@@ -38,7 +38,7 @@ struct JarvisIslandWidget: Widget {
                 if !quiet(s) { Compact(state: s) }  // тихо - островок как обычный, без наших значков
             } compactTrailing: {
                 if let d = s.decision {  // ждёт решения - знак вопроса цвета агента, раскрыть - кнопки
-                    Image(systemName: d.kind == "deploy" ? "arrow.up.circle.fill" : "questionmark.circle.fill")
+                    Image(systemName: DecisionCard.icon(d))
                         .foregroundStyle(SpiritView.color(d.agent))
                 } else if !quiet(s) {
                     Trailing(state: s).font(.system(size: 13, weight: .semibold, design: .rounded))
