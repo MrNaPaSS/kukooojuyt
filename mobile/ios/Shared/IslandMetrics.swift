@@ -89,13 +89,15 @@ struct WorkCard: View {
             HStack(spacing: 8) {
                 SpiritView(id: spirit.id, busy: true, size: 24)
                 Text(spirit.name).font(.system(size: 15, weight: .bold)).foregroundStyle(tint)
+                    .lineLimit(1).fixedSize()
                 if let since = spirit.since {
                     Text(timerInterval: since...since.addingTimeInterval(36_000), countsDown: false)
                         .font(.system(size: 13, weight: .semibold)).monospacedDigit().foregroundStyle(DashTheme.label)
-                        .frame(maxWidth: 64, alignment: .leading)
+                        .frame(maxWidth: 50, alignment: .leading)
                 }
                 Spacer(minLength: 0)
-                LimitChip(spirit: spirit)
+                // Целиком, без обрезки (владелец 03.10.2026: «не видно полностью лимиты»).
+                LimitChip(spirit: spirit, size: 11, compact: true).fixedSize()
                 if spirit.total > 0 {
                     Text("\(spirit.done)/\(spirit.total)").font(.system(size: 15, weight: .bold, design: .rounded))
                         .monospacedDigit().foregroundStyle(tint)
@@ -131,6 +133,7 @@ struct WorkCard: View {
 struct LimitChip: View {
     let spirit: IslandAttributes.Spirit
     var size: CGFloat = 12
+    var compact = false  // «5ч 39% · н 57%» - для тесной строки островка
 
     /// Выше этого процента лимит становится поводом поторопиться.
     static let hot = 80
@@ -138,17 +141,17 @@ struct LimitChip: View {
     var body: some View {
         if let worst = [spirit.lim5, spirit.lim7].compactMap({ $0 }).max() {
             let tint = worst >= LimitChip.hot ? DashTheme.down : DashTheme.label
-            Text(LimitChip.text(five: spirit.lim5, week: spirit.lim7))
+            Text(LimitChip.text(five: spirit.lim5, week: spirit.lim7, compact: compact))
                 .font(.system(size: size, weight: .semibold)).monospacedDigit()
                 .foregroundStyle(tint)
-                .padding(.horizontal, 6).padding(.vertical, 2)
+                .padding(.horizontal, compact ? 4 : 6).padding(.vertical, 2)
                 .background(Capsule().fill(tint.opacity(0.14)))
         }
     }
 
     /// «5ч 90% · нед 55%»; нет одного из окон - показываем то, что есть.
-    static func text(five: Int?, week: Int?) -> String {
-        [five.map { "5ч \($0)%" }, week.map { "нед \($0)%" }].compactMap { $0 }.joined(separator: " · ")
+    static func text(five: Int?, week: Int?, compact: Bool = false) -> String {
+        [five.map { "5ч \($0)%" }, week.map { compact ? "н \($0)%" : "нед \($0)%" }].compactMap { $0 }.joined(separator: " · ")
     }
 }
 
