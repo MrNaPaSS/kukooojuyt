@@ -37,7 +37,12 @@ struct JarvisIslandWidget: Widget {
             } compactLeading: {
                 if !quiet(s) { Compact(state: s) }  // тихо - островок как обычный, без наших значков
             } compactTrailing: {
-                if !quiet(s) { Trailing(state: s).font(.system(size: 13, weight: .semibold, design: .rounded)) }
+                if let d = s.decision {  // ждёт решения - знак вопроса цвета агента, раскрыть - кнопки
+                    Image(systemName: d.kind == "deploy" ? "arrow.up.circle.fill" : "questionmark.circle.fill")
+                        .foregroundStyle(SpiritView.color(d.agent))
+                } else if !quiet(s) {
+                    Trailing(state: s).font(.system(size: 13, weight: .semibold, design: .rounded))
+                }
             } minimal: {
                 if !quiet(s) { SpiritView(id: lead(s).id, busy: lead(s).busy, size: 16) }
             }
@@ -50,7 +55,7 @@ struct JarvisIslandWidget: Widget {
 /// Тихо: никто не работает, не говорит, не пишет голосовое, нет итога отправки и тревог -
 /// островок выглядит как обычный системный (просьба владельца 02.10.2026). Метрики - по долгому нажатию.
 func quiet(_ s: IslandAttributes.ContentState) -> Bool {
-    s.mode == .quiet && s.done.isEmpty && (s.dash?.alerts.isEmpty ?? true)
+    s.mode == .quiet && s.done.isEmpty && s.decision == nil && (s.dash?.alerts.isEmpty ?? true)
 }
 
 private struct Compact: View {

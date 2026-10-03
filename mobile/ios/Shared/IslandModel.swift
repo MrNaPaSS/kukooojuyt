@@ -16,6 +16,22 @@ struct IslandAttributes: ActivityAttributes {
         var speaker = "jarvis"        // кто сейчас говорит голосом: jarvis, server, pc
         var done = ""                 // итог отправки голосового на 3 с: «Отправлено: Агент ✓» или ошибка
         var doneOK = true
+        var decision: Decision? = nil  // что ждёт решения владельца - показывается первым (03.10.2026)
+    }
+
+    /// Выкладка правки или вопрос агента с вариантами (pult_decision на сервере). На замке, в
+    /// островке и в уведомлении - кнопки вариантов; сложный вопрос (simple = false) - «Открыть».
+    struct Decision: Codable, Hashable {
+        var kind: String     // deploy, choice
+        var id: String
+        var agent: String
+        var title: String
+        var text: String
+        var options: [String]
+        var simple: Bool
+
+        /// Ключ для «уже показали уведомление»: новое решение - новый ключ.
+        var key: String { "\(kind)|\(id)|\(text.prefix(40))" }
     }
 
     enum Mode: String, Codable, Hashable {
@@ -102,6 +118,19 @@ enum IslandBuilder {
         }
     }
 
+    /// Что ждёт решения владельца: поле decision ответа агентов. Текст короче - у Live Activity
+    /// 4 КБ на всё состояние.
+    static func decision(from state: [String: Any]) -> IslandAttributes.Decision? {
+        guard let d = state["decision"] as? [String: Any], let kind = d["kind"] as? String,
+              let id = d["id"] as? String else { return nil }
+        let options = (d["options"] as? [String] ?? []).prefix(4).map { String($0.prefix(24)) }
+        return IslandAttributes.Decision(
+            kind: kind, id: id, agent: d["agent"] as? String ?? "pc",
+            title: String((d["title"] as? String ?? "").prefix(60)),
+            text: String((d["text"] as? String ?? "").prefix(160)),
+            options: options, simple: (d["simple"] as? Bool ?? false) && !options.isEmpty)
+    }
+
     /// Последнее действие агента в ленте (строка «do»); у записей без агента - Claude Code на ПК.
     static func lastAction(_ chat: [[String: Any]], of id: String) -> String {
         let text = chat.last { ($0["who"] as? String) == "do" && (($0["agent"] as? String) ?? "pc") == id }?["text"]
@@ -110,11 +139,10 @@ enum IslandBuilder {
 
     /// Окно плана для островка: последний готовый шаг, текущий и следующие - всего до limit.
     ///
-    /// Шесть, а не четыре (владелец 03.10.2026): он смотрит на островок, чтобы
-    /// понять, где работа встала, и для этого нужен хвост плана, а не один шаг.
-    /// Выше поднимать нельзя - у Live Activity 4 КБ на всё состояние, и туда же
-    /// идут духи, сводка и уровни голоса.
-    static func window(_ todo: [IslandAttributes.Todo], limit: Int = 6) -> [IslandAttributes.Todo] {
+    /// Четыре строки: шесть не влезали - последняя обрезалась краем островка и
+    /// замка (владелец 03.10.2026, снимок). Один готовый позади, текущий и два
+    /// следующих - видно, где работа идёт и сколько осталось.
+    static func window(_ todo: [IslandAttributes.Todo], limit: Int = 4) -> [IslandAttributes.Todo] {
         guard todo.count > limit else { return todo }
         let current = todo.firstIndex { $0.s == 1 } ?? todo.firstIndex { $0.s == 0 } ?? todo.count - 1
         let start = min(max(0, current - 1), todo.count - limit)

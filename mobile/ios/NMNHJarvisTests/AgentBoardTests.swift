@@ -40,10 +40,20 @@ final class AgentBoardTests: XCTestCase {
     func testIslandTodoWindowKeepsCurrentStep() {
         let todo = (0..<10).map { IslandAttributes.Todo(t: "шаг \($0)", s: $0 < 5 ? 2 : $0 == 5 ? 1 : 0) }
         let shown = IslandBuilder.window(todo)
-        // Шесть строк вокруг текущего: один сделанный позади, текущий и хвост
-        // плана - по нему видно, сколько работы ещё впереди (владелец 03.10.2026).
-        XCTAssertEqual(shown.map(\.t), ["шаг 4", "шаг 5", "шаг 6", "шаг 7", "шаг 8", "шаг 9"])
+        // Четыре строки вокруг текущего: один сделанный позади, текущий и два
+        // следующих - больше не влезает в островок (владелец 03.10.2026).
+        XCTAssertEqual(shown.map(\.t), ["шаг 4", "шаг 5", "шаг 6", "шаг 7"])
         XCTAssertEqual(IslandBuilder.window(Array(todo.prefix(3))).count, 3)
+    }
+
+    func testDecisionParsedForIsland() {
+        let state: [String: Any] = ["decision": ["kind": "deploy", "id": "deploy", "agent": "server",
+                                                 "title": "Server PC просит выложить правку", "text": "fix: x",
+                                                 "options": ["Выложить", "Отклонить"], "simple": true]]
+        let d = IslandBuilder.decision(from: state)
+        XCTAssertEqual(d?.options, ["Выложить", "Отклонить"])
+        XCTAssertEqual(d?.simple, true)
+        XCTAssertNil(IslandBuilder.decision(from: [:]))
     }
 
     /// Время шага доезжает с сервера: у готового - сколько занял, у текущего - когда взяли.

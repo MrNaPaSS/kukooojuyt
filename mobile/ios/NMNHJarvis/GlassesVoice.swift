@@ -84,6 +84,8 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
     private var skipHer = false   // ответ Джарвис уже прозвучал (голосом или на текст со страницы)
     private var polling = false
     private var speaker = "jarvis"  // чей голос сейчас звучит - его дух в островке
+    private var decision: IslandAttributes.Decision?  // что ждёт решения владельца - первым на замке
+    private var busyWere: Set<String> = []  // кто работал прошлым опросом - «закончил» в уведомление
     static let agents = ["jarvis", "server", "pc"]
     private let recordURL = FileManager.default.temporaryDirectory.appendingPathComponent("glasses.m4a")
 
@@ -508,7 +510,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         IslandController.shared.show(IslandAttributes.ContentState(
             mode: mode, spirits: spirits, recSince: recSince, line: line, page: page, dash: dash,
             recFor: target, levels: mode == .recording ? levels : [], speaker: speaker,
-            done: doneNote, doneOK: doneOK),
+            done: doneNote, doneOK: doneOK, decision: decision),
             force: mode == .recording || alert)  // без оповещения-раскрытия: оно обрывало голос
     }
 
@@ -523,6 +525,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         muted = Set((state["mute"] as? [String: Bool] ?? [:]).filter(\.value).map(\.key))
         spirits = IslandBuilder.spirits(from: state, now: Date())
         AgentBoard.shared.apply(state, now: Date())
+        notify(IslandBuilder.decision(from: state))
         polls += 1
         if polls % 5 == 1, let fresh = try? await api.island() { dash = fresh }  // сводка - раз в 15 с
         // Островок и экран блокировки листают страницы: агенты, деньги, сервер, сделки, задачи.
@@ -550,6 +553,40 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         } else if speakAgents, theirKey != lastTheirs, !theirKey.isEmpty, let last = theirs.last?["text"] as? String {
             let who = theirs.last?["agent"] as? String == "server" ? "server" : "pc"
             if !muted.contains(who) { speak(last, by: who) }  // целиком, как на ПК
+        }
+    }
+
+    /// Решение и «закончил» - в настоящие уведомления (Notifier). Новое решение раскрывает островок.
+    private func notify(_ next: IslandAttributes.Decision?) {
+        let fresh = next != nil && next?.key != decision?.key
+        decision = next
+        Notifier.shared.show(next)
+        if fresh { refreshIsland(alert: true) }
+        let busy = Set(spirits.filter(\.busy).map(\.id))
+        if seenJarvis >= 0 {  // первый опрос - только запомнить
+            for id in busyWere.subtracting(busy) where id != "jarvis" && !muted.contains(id) {
+                let plan = AgentBoard.shared.plans[id]
+                Notifier.shared.finished(agent: id, step: plan?.name ?? "")
+            }
+        }
+        busyWere = busy
+    }
+
+    /// Кнопка решения в островке, на замке или в уведомлении. Работает и когда режим очков
+    /// выключен: вход берётся из связки ключей, свежий токен - по refresh.
+    func decide(kind: String, id: String, pick: Int) async {
+        if api == nil, let raw = Keychain.load("base"), let base = URL(string: raw),
+           let refresh = Keychain.load("refresh") {
+            api = ServerAPI(base: base, access: "", refresh: refresh)
+        }
+        guard let api else { return }
+        do {
+            let text = try await api.decide(kind: kind, id: id, pick: pick)
+            decision = nil
+            Notifier.shared.show(nil)
+            flashDone(text, ok: true)
+        } catch {
+            flashDone("Не отправилось: сервер не отвечает", ok: false)
         }
     }
 

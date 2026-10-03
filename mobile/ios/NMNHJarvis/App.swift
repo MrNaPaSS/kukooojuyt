@@ -8,6 +8,8 @@ import WebKit
 /// режим и показывает его состояние.
 @main
 struct NMNHJarvisApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate  // уведомления с кнопками
+
     var body: some Scene {
         WindowGroup {
             if ProcessInfo.processInfo.arguments.contains("-demo") {

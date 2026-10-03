@@ -15,7 +15,12 @@ struct IslandMetrics: View {
             // 03.10.2026): духи-кнопки и метрики сервера ничего не говорят о
             // ходе работы, а список шагов со временем - говорит. В покое они
             // возвращаются: тогда это главное, что есть на экране.
-            if state.mode == .working, let busy = worker {
+            // Решение владельца важнее всего, кроме идущей записи (владелец 03.10.2026: «на
+            // экране блокировки либо вопросы выбора, либо подтвердить выкладку, а то всегда
+            // текущее действие агентов, если ничего - обычные метрики»).
+            if let d = state.decision, state.mode != .recording {
+                DecisionCard(decision: d)
+            } else if state.mode == .working, let busy = worker {
                 WorkCard(spirit: busy)
             } else if state.mode == .speaking {
                 // Заговорил - островок раскрывается на пару секунд: слева он, справа его задача
@@ -79,9 +84,9 @@ struct IslandMetrics: View {
 struct WorkCard: View {
     let spirit: IslandAttributes.Spirit
 
-    /// Сколько строк плана показываем. Шесть - предел читаемого на замке и в
-    /// островке: дальше строки мельчают, а карточка лезет за край.
-    static let maxLines = 6
+    /// Сколько строк плана показываем: шесть не влезали, последняя обрезалась
+    /// (владелец 03.10.2026, снимок островка).
+    static let maxLines = 4
 
     var body: some View {
         let tint = SpiritView.color(spirit.id)
@@ -120,6 +125,47 @@ struct WorkCard: View {
                 // духу, таймеру и самой карточке: лишнее слово места не стоит.
                 Text("план не заявлен")
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(DashTheme.faint).lineLimit(1)
+            }
+        }
+    }
+}
+
+/// Что ждёт решения: кто спрашивает, вопрос и кнопки вариантов. Кнопка - DecideIntent: ответ
+/// уходит на сервер из островка и с замка, не открывая приложение. Сложный вопрос - «Открыть».
+struct DecisionCard: View {
+    let decision: IslandAttributes.Decision
+
+    var body: some View {
+        let tint = SpiritView.color(decision.agent)
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 7) {
+                SpiritView(id: decision.agent, busy: true, size: 20)
+                Text(decision.title).font(.system(size: 14, weight: .bold)).foregroundStyle(tint)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                Image(systemName: decision.kind == "deploy" ? "arrow.up.circle.fill" : "questionmark.circle.fill")
+                    .font(.system(size: 15, weight: .bold)).foregroundStyle(tint)
+            }
+            Text(decision.text).font(.system(size: 13, weight: .medium)).foregroundStyle(DashTheme.ink)
+                .lineLimit(2)
+            if decision.simple {
+                HStack(spacing: 6) {
+                    ForEach(Array(decision.options.enumerated()), id: \.offset) { index, label in
+                        Button(intent: DecideIntent(kind: decision.kind, id: decision.id, pick: index)) {
+                            Text(label).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .foregroundStyle(index == 0 ? Color.black : DashTheme.ink)
+                                .padding(.vertical, 7).frame(maxWidth: .infinity)
+                                .background(Capsule().fill(index == 0 ? tint : Color.white.opacity(0.12)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            } else {
+                Link(destination: URL(string: "jarvis://plan?agent=\(decision.agent)") ?? URL(fileURLWithPath: "/")) {
+                    Text("Открыть и ответить").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.black)
+                        .padding(.vertical, 7).frame(maxWidth: .infinity).background(Capsule().fill(tint))
+                }
             }
         }
     }

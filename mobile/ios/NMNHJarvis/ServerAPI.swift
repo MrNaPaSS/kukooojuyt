@@ -58,6 +58,14 @@ final class ServerAPI {
         return dash
     }
 
+    /// Решение владельца из уведомления или островка: выкладка или вариант ответа (pult_decision).
+    func decide(kind: String, id: String, pick: Int) async throws -> String {
+        let body = try JSONSerialization.data(withJSONObject: ["kind": kind, "id": id, "pick": pick])
+        let data = try await call("api/admin/agents/decide", method: "POST", body: body, type: "application/json")
+        let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        return reply?["text"] as? String ?? reply?["message"] as? String ?? "Готово"
+    }
+
     func speech(_ text: String, jarvis: Bool = true) async throws -> Data {
         var parts = URLComponents()
         parts.queryItems = [URLQueryItem(name: "text", value: String(text.prefix(1500))),
