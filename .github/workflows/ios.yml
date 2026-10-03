@@ -11,6 +11,9 @@ on:
 
 jobs:
   build:
+    # Собирается только в открытом репозитории kukooojuyt (снимок mobile/ios с ПК): в MENTOR
+    # кончились минуты Actions, и сборка падала красным за 10 секунд (03.10.2026). Здесь - пропуск.
+    if: github.repository == 'MrNaPaSS/kukooojuyt'
     runs-on: macos-15
     timeout-minutes: 40
     defaults:

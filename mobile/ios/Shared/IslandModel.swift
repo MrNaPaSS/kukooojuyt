@@ -53,8 +53,8 @@ extension IslandAttributes.Spirit {
     var name: String {
         switch id {
         case "jarvis": return "Джарвис"
-        case "server": return "Домашний"
-        default: return "Claude Code"
+        case "server": return "Server PC"
+        default: return "Local PC"
         }
     }
 }
