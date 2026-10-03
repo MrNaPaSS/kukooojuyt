@@ -17,11 +17,13 @@ struct IslandMetrics: View {
             // возвращаются: тогда это главное, что есть на экране.
             if state.mode == .working, let busy = worker {
                 WorkCard(spirit: busy)
+            } else if state.mode == .speaking {
+                // Заговорил - островок раскрывается на пару секунд: слева он, справа его задача
+                // и ход (владелец 03.10.2026), потом iOS сворачивает в обычный дух с волной.
+                SpeakerCard(state: state)
             } else {
                 AgentPills(state: state)
-                if state.mode == .speaking {
-                    SpeakerCard(state: state)  // заговорил агент - он крупно, метрики после озвучки
-                } else if let d = state.dash {
+                if let d = state.dash {
                     LimitsRow(spirits: state.spirits)
                     ServerRow(srv: d.srv)
                     third(d)
@@ -228,19 +230,47 @@ struct TodoLine: View {
 /// Говорящий крупно: дух, имя, фраза в две строки.
 struct SpeakerCard: View {
     let state: IslandAttributes.ContentState
+
+    private var spirit: IslandAttributes.Spirit? { state.spirits.first { $0.id == state.speaker } }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            SpiritView(id: state.speaker, busy: true, size: 40)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
+        let tint = SpiritView.color(state.speaker)
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .center, spacing: 10) {
+                // Слева - кто говорит.
+                SpiritView(id: state.speaker, busy: true, size: 38)
+                VStack(alignment: .leading, spacing: 2) {
                     Text(GlassesAgents.name(state.speaker)).font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(SpiritView.color(state.speaker))
-                    Image(systemName: "waveform").font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(SpiritView.color(state.speaker))
+                        .foregroundStyle(tint).lineLimit(1)
+                    Image(systemName: "waveform").font(.system(size: 13, weight: .bold)).foregroundStyle(tint)
+                        .symbolEffect(.variableColor.iterative, options: .repeating)
                 }
-                Text(state.line).font(.system(size: 14, weight: .medium)).foregroundStyle(DashTheme.ink).lineLimit(2)
+                .fixedSize()
+                Spacer(minLength: 8)
+                // Справа - его задача и ход выполнения.
+                task(tint)
             }
-            Spacer(minLength: 0)
+            Text(state.line).font(.system(size: 13, weight: .medium)).foregroundStyle(DashTheme.ink2).lineLimit(1)
+        }
+    }
+
+    @ViewBuilder private func task(_ tint: Color) -> some View {
+        if let s = spirit, s.total > 0 {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(s.step.isEmpty ? "план выполнен" : s.step)
+                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(DashTheme.ink)
+                    .lineLimit(2).multilineTextAlignment(.trailing)
+                HStack(spacing: 6) {
+                    Bar(progress: Double(s.done) / Double(max(1, s.total)), tint: tint).frame(width: 70)
+                    Text("\(s.done)/\(s.total)").font(.system(size: 13, weight: .bold, design: .rounded))
+                        .monospacedDigit().foregroundStyle(tint)
+                }
+            }
+        } else if let s = spirit, s.busy, !s.step.isEmpty {
+            Text(s.step).font(.system(size: 13, weight: .semibold)).foregroundStyle(DashTheme.ink)
+                .lineLimit(2).multilineTextAlignment(.trailing)
+        } else {
+            Text("без задачи").font(.system(size: 12, weight: .medium)).foregroundStyle(DashTheme.faint)
         }
     }
 }

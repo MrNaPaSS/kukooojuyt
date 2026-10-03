@@ -75,6 +75,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
     private var chunks: [(text: String, by: String)] = []   // что ещё дочитать
     private var nextAudio: Task<Data?, Never>?             // следующий кусок готовится, пока звучит этот
     private var pumping = false
+    private var fresh = false   // следующий кусок - начало новой реплики
     private var doneNote = ""         // «Отправлено: Агент ✓» - в островке на 3 с после отправки
     private var doneOK = true
     private var voiceCut = false      // голос прервало оповещение или звонок - продолжить
@@ -411,7 +412,11 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
     }
 
     private func play(_ mp3: Data, by agent: String = "jarvis") {
-        let starts = !(voice?.isPlaying ?? false) || speaker != agent
+        // Раскрыть островок - один раз на реплику или при смене говорящего, а не на каждый кусок:
+        // между кусками голос на миг замолкает, и раскрытие шло на каждый - iOS такие частые
+        // оповещения душит, и островок не раскрывался вовсе (владелец 03.10.2026).
+        let starts = fresh || speaker != agent || !pumping
+        fresh = false
         speaker = agent
         voice = try? AVAudioPlayer(data: mp3)
         voice?.delegate = self
@@ -425,7 +430,10 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         guard !parts.isEmpty else { return }
         said = text
         chunks += parts.map { (text: $0, by: agent) }
-        if !pumping { pump() }
+        if !pumping {
+            fresh = true  // новая реплика - островок раскроется на её первом куске
+            pump()
+        }
     }
 
     private func pump() {
