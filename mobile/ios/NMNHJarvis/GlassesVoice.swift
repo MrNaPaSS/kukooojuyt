@@ -75,6 +75,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
     private var chunks: [(text: String, by: String)] = []   // что ещё дочитать
     private var nextAudio: Task<Data?, Never>?             // следующий кусок готовится, пока звучит этот
     private var pumping = false
+    private var muted: Set<String> = []  // агенты в беззвучном режиме (с сервера)
     private var fresh = false   // следующий кусок - начало новой реплики
     private var doneNote = ""         // «Отправлено: Агент ✓» - в островке на 3 с после отправки
     private var doneOK = true
@@ -375,7 +376,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
             } else {
                 flashDone("Отправлено: \(GlassesAgents.name(target)) ✓", ok: true)
             }
-            if let mp3 = Data(base64Encoded: reply.audio), !mp3.isEmpty { play(mp3, by: target) }
+            if let mp3 = Data(base64Encoded: reply.audio), !mp3.isEmpty, !muted.contains(target) { play(mp3, by: target) }
             if target == "jarvis" { skipHer = true }  // её ответ попадёт в ленту - не озвучивать его второй раз
         } catch ServerAPI.Failure.unauthorized {
             onVoice?(target, "failed", "")
@@ -518,6 +519,8 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         polling = true
         defer { polling = false }
         guard let state = try? await api.agents(), let chat = state["chat"] as? [[String: Any]] else { return }
+        // Беззвучный режим агентов - с сервера (pult_mute, владелец 03.10.2026).
+        muted = Set((state["mute"] as? [String: Bool] ?? [:]).filter(\.value).map(\.key))
         spirits = IslandBuilder.spirits(from: state, now: Date())
         AgentBoard.shared.apply(state, now: Date())
         polls += 1
@@ -543,10 +546,10 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         if herKey != lastHer, !herKey.isEmpty, skipHer {
             skipHer = false  // это её ответ, уже сказанный
         } else if herKey != lastHer, !herKey.isEmpty, let last = hers.last?["text"] as? String {
-            speak(last, by: "jarvis")
+            if !muted.contains("jarvis") { speak(last, by: "jarvis") }
         } else if speakAgents, theirKey != lastTheirs, !theirKey.isEmpty, let last = theirs.last?["text"] as? String {
             let who = theirs.last?["agent"] as? String == "server" ? "server" : "pc"
-            speak(last, by: who)  // целиком, как на ПК
+            if !muted.contains(who) { speak(last, by: who) }  // целиком, как на ПК
         }
     }
 
