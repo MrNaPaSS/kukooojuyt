@@ -125,6 +125,9 @@ final class Bridge: NSObject, WKScriptMessageHandler, WKUIDelegate {
                 voice.press()
             case "play":
                 voice.playFromPage(body["audio"] as? String ?? "")
+            case "mute":
+                let map = body["agents"] as? [String: Bool] ?? [:]
+                voice.applyMute(Set(map.filter(\.value).map(\.key)))
             case "speak":
                 voice.speakAgents = body["on"] as? Bool ?? false
             case "hold":
