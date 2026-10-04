@@ -185,18 +185,36 @@ struct LockGallery: View {
                 }
                 ForEach(Array(scenes.enumerated()), id: \.offset) { _, scene in
                     Text(scene.0).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.6))
-                    IslandMetrics(state: scene.1)
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(DashTheme.base.opacity(0.55)))
-                        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(.ultraThinMaterial))
+                    LockGlass { IslandMetrics(state: scene.1) }
+                    // Под общей карточкой - окна тех, кто работает по плану (AgentWindow, 04.10.2026).
+                    if scene.1.mode == .working && scene.1.decision == nil {
+                        ForEach(scene.1.spirits.filter(\.wantsWindow)) { spirit in
+                            LockGlass { AgentWindowCard(state: .init(spirit: spirit)) }
+                        }
+                        Text("Агент закончил - окно закроется через 20 с").font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.6))
+                        if let first = scene.1.spirits.first(where: \.wantsWindow) {
+                            LockGlass { AgentWindowCard(state: AgentActivityPlan.finished(first)) }
+                        }
+                    }
                 }
             }
             .padding(12)
         }
         .background(LinearGradient(colors: [Color(red: 0.18, green: 0.22, blue: 0.42), Color(red: 0.05, green: 0.05, blue: 0.12)],
                                    startPoint: .top, endPoint: .bottom).ignoresSafeArea())
+    }
+}
+
+/// Стекло карточки на замке: так iOS кладёт Live Activity поверх размытых обоев.
+private struct LockGlass<Content: View>: View {
+    @ViewBuilder let content: Content
+    var body: some View {
+        content
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(DashTheme.base.opacity(0.55)))
+            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(.ultraThinMaterial))
     }
 }
 

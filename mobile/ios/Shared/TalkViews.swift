@@ -121,4 +121,16 @@ enum GlassesAgents {
             .map { Extra(id: $0.id, name: $0.title ?? $0.id, hex: $0.hex ?? "#8e939c") }
         if found != extra { extra = found }
     }
+
+    /// Запомнить одного агента, не забывая остальных: окно агента знает только его самого,
+    /// и learn по нему стёр бы цвета других добавленных.
+    static func remember(_ spirit: IslandAttributes.Spirit) {
+        guard !builtin.contains(spirit.id) else { return }
+        let one = Extra(id: spirit.id, name: spirit.title ?? spirit.id, hex: spirit.hex ?? "#8e939c")
+        if let index = extra.firstIndex(where: { $0.id == one.id }) {
+            if extra[index] != one { extra[index] = one }
+        } else {
+            extra.append(one)
+        }
+    }
 }

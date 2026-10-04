@@ -144,6 +144,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         NotificationCenter.default.removeObserver(self)
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         IslandController.shared.end()
+        AgentActivities.shared.endAll()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         onState?("off", "")
     }
@@ -533,6 +534,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         defer { polling = false }
         guard let state = try? await api.agents(), let chat = state["chat"] as? [[String: Any]] else { return }
         spirits = IslandBuilder.spirits(from: state, now: Date())
+        AgentActivities.shared.sync(spirits)  // отдельные окна работающих по плану (04.10.2026)
         AgentBoard.shared.apply(state, now: Date())
         notify(IslandBuilder.decision(from: state))
         polls += 1

@@ -20,12 +20,14 @@ struct JarvisIslandBundle: WidgetBundle {
     }
 }
 
-/// Нагрузка двух серверов кольцами (04.10.2026) - отдельной группой: список бандла упёрся в 10.
+/// Нагрузка двух серверов кольцами и окна агентов (04.10.2026) - отдельной группой: список
+/// бандла упёрся в 10.
 struct HostWidgets: WidgetBundle {
     var body: some Widget {
         HostMainWidget()
         HostAgentsWidget()
         HostsWidget()
+        AgentWindowWidget()  // отдельная Live Activity на каждого, кто работает по плану
     }
 }
 
