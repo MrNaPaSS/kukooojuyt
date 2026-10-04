@@ -28,6 +28,8 @@ struct PultProvider: TimelineProvider {
     static func current() -> PultEntry? {
         guard let dash = SharedStore.load(Dash.self, from: "dash.json") else { return nil }
         let spirits = SharedStore.load([IslandAttributes.Spirit].self, from: "spirits.json") ?? []
+        // Добавленные агенты (Clawdbot, Codex): цвет и имя - в процессе виджетов тоже, иначе серые (04.10.2026).
+        GlassesAgents.learn(spirits)
         return PultEntry(date: Date(), dash: dash, spirits: spirits, fresh: true)
     }
 
@@ -657,6 +659,41 @@ struct HostWidgetView: View {
                     LoadRing(label: "Диск", value: host.disk, note: small ? "" : host.disk_note, size: small ? 42 : 64)
                 }
                 .frame(maxWidth: .infinity)
+                Spacer(minLength: 0)
+                Freshness(entry: entry)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .pultBackground()
+    }
+}
+
+
+/// Оба сервера в одном виджете (04.10.2026): сервер терминала и сервер агентов - по ряду колец.
+struct HostsWidgetView: View {
+    let entry: PultEntry
+    var forced: WidgetFamily?
+    var body: some View {
+        let hosts = entry.dash.hosts.isEmpty
+            ? [Dash.Host(name: "Сервер терминала"), Dash.Host(name: "Сервер агентов")] : entry.dash.hosts
+        Sized(forced: forced) { family in
+            let large = family == .systemLarge
+            VStack(alignment: .leading, spacing: large ? 14 : 6) {
+                ForEach(Array(hosts.prefix(2).enumerated()), id: \.offset) { _, host in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(host.name).font(.system(size: 12, weight: .semibold)).foregroundStyle(DashTheme.ink)
+                            Spacer()
+                            if !host.online { Caption(text: "нет связи", color: DashTheme.down, size: 10) }
+                        }
+                        HStack(alignment: .top, spacing: 10) {
+                            LoadRing(label: "ЦП", value: host.cpu, note: large ? host.cpu_note : "", size: large ? 62 : 40)
+                            LoadRing(label: "ОЗУ", value: host.ram, note: large ? host.ram_note : "", size: large ? 62 : 40)
+                            LoadRing(label: "Диск", value: host.disk, note: large ? host.disk_note : "", size: large ? 62 : 40)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
                 Spacer(minLength: 0)
                 Freshness(entry: entry)
             }

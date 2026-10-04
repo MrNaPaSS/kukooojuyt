@@ -25,6 +25,7 @@ struct HostWidgets: WidgetBundle {
     var body: some Widget {
         HostMainWidget()
         HostAgentsWidget()
+        HostsWidget()
     }
 }
 

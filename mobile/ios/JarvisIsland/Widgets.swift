@@ -46,6 +46,15 @@ struct HostMainWidget: Widget {
     }
 }
 
+struct HostsWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "nmnh.hosts", provider: PultProvider()) { HostsWidgetView(entry: $0) }
+            .configurationDisplayName("Оба сервера")
+            .description("Сервер терминала и сервер агентов в одном виджете: ЦП, ОЗУ, диск.")
+            .supportedFamilies([.systemMedium, .systemLarge])
+    }
+}
+
 struct HostAgentsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "nmnh.host.agents", provider: PultProvider()) { HostWidgetView(entry: $0, index: 1) }
