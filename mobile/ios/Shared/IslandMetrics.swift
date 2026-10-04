@@ -44,8 +44,7 @@ struct IslandMetrics: View {
 
     /// Кто работает: сначала агент с планом, Джарвис - последней.
     private var worker: IslandAttributes.Spirit? {
-        let busy = state.spirits.filter(\.busy)
-        return busy.first { $0.total > 0 && $0.id != "jarvis" } ?? busy.first { $0.id != "jarvis" } ?? busy.first
+        freshest(state.spirits.filter(\.busy))
     }
 
     @ViewBuilder private func third(_ d: Dash) -> some View {

@@ -32,6 +32,8 @@ struct HostWidgets: WidgetBundle {
 struct JarvisIslandWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: IslandAttributes.self) { context in
+            // Процесс островка свой: имена и цвета добавленных агентов (Codex, Clawdbot) - из духов состояния.
+            let _ = GlassesAgents.learn(context.state.spirits)
             LockCard(state: context.state, stale: context.isStale)
                 .padding(14)
                 .widgetURL(planURL(context.state.spirits))
@@ -39,6 +41,7 @@ struct JarvisIslandWidget: Widget {
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             let s = context.state
+            GlassesAgents.learn(s.spirits)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
                     IslandMetrics(state: s, stale: context.isStale)  // агенты-кнопки, сервер, сторож - без прибыли

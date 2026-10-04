@@ -189,8 +189,19 @@ func lead(_ s: IslandAttributes.ContentState) -> IslandAttributes.Spirit {
     if voice.contains(s.mode), let j = s.spirits.first(where: { $0.id == "jarvis" }) {
         return j
     }
-    return s.spirits.first { $0.busy } ?? s.spirits.first
+    return freshest(s.spirits.filter(\.busy)) ?? s.spirits.first
         ?? IslandAttributes.Spirit(id: "jarvis", busy: false, since: nil, done: 0, total: 0, step: "")
+}
+
+/// Из работающих - тот, кто последним взял шаг (агент с планом, Джарвис последней). Раньше брали первого по
+/// порядку, и Codex с Clawdbot в конце списка на островке не появлялись никогда (владелец 04.10.2026).
+func freshest(_ busy: [IslandAttributes.Spirit]) -> IslandAttributes.Spirit? {
+    func began(_ s: IslandAttributes.Spirit) -> Date {
+        s.todo?.first { $0.s == 1 }?.b ?? s.since ?? .distantPast
+    }
+    let agents = busy.filter { $0.id != "jarvis" }
+    let planned = agents.filter { $0.total > 0 }
+    return (planned.isEmpty ? agents : planned).max { began($0) < began($1) } ?? busy.first
 }
 
 
