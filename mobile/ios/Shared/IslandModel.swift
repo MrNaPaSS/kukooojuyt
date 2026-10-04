@@ -130,7 +130,7 @@ enum IslandBuilder {
                                            done: states.filter { $0 == 2 }.count, total: steps.count,
                                            step: current ?? (busy ? lastAction(chat, of: id) : ""),
                                            todo: busy ? window(todo) : nil,
-                                           lim5: (lim.first as? NSNumber)?.intValue.flatMap { $0 < 0 ? nil : $0 },
+                                           lim5: ((lim.first as? NSNumber)?.intValue).flatMap { $0 < 0 ? nil : $0 },
                                            lim7: (lim.count > 2 ? lim[2] as? NSNumber : nil)?.intValue,
                                            limw: lim.count > 4 ? lim[4] as? String : nil,
                                            title: registry.first { $0.0 == id }?.1,
