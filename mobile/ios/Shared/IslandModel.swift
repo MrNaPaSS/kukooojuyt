@@ -69,6 +69,7 @@ struct IslandAttributes: ActivityAttributes {
         // «успеет ли он доделать» возникает именно тогда, когда он занят.
         var lim5: Int? = nil
         var lim7: Int? = nil
+        var limw: String? = nil  // подпись длинного окна: «нед» у Claude, «мес» у Codex на Go (04.10.2026)
         var title: String? = nil  // имя добавленного агента (Server 2); у встроенных - nil
         var hex: String? = nil    // его цвет «#rrggbb»
     }
@@ -129,8 +130,9 @@ enum IslandBuilder {
                                            done: states.filter { $0 == 2 }.count, total: steps.count,
                                            step: current ?? (busy ? lastAction(chat, of: id) : ""),
                                            todo: busy ? window(todo) : nil,
-                                           lim5: (lim.first as? NSNumber)?.intValue,
+                                           lim5: (lim.first as? NSNumber)?.intValue.flatMap { $0 < 0 ? nil : $0 },
                                            lim7: (lim.count > 2 ? lim[2] as? NSNumber : nil)?.intValue,
+                                           limw: lim.count > 4 ? lim[4] as? String : nil,
                                            title: registry.first { $0.0 == id }?.1,
                                            hex: registry.first { $0.0 == id }?.2)
         }

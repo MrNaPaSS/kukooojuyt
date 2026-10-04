@@ -237,7 +237,7 @@ struct LimitChip: View {
     var body: some View {
         if let worst = [spirit.lim5, spirit.lim7].compactMap({ $0 }).max() {
             let tint = worst >= LimitChip.hot ? DashTheme.down : DashTheme.label
-            Text(LimitChip.text(five: spirit.lim5, week: spirit.lim7, compact: compact))
+            Text(LimitChip.text(five: spirit.lim5, week: spirit.lim7, compact: compact, label: spirit.limw))
                 .font(.system(size: size, weight: .semibold)).monospacedDigit()
                 .foregroundStyle(tint)
                 .padding(.horizontal, compact ? 4 : 6).padding(.vertical, 2)
@@ -246,8 +246,10 @@ struct LimitChip: View {
     }
 
     /// «5ч 90% · нед 55%»; нет одного из окон - показываем то, что есть.
-    static func text(five: Int?, week: Int?, compact: Bool = false) -> String {
-        [five.map { "5ч \($0)%" }, week.map { compact ? "н \($0)%" : "нед \($0)%" }].compactMap { $0 }.joined(separator: " · ")
+    static func text(five: Int?, week: Int?, compact: Bool = false, label: String? = nil) -> String {
+        let long = label ?? "нед"
+        return [five.map { "5ч \($0)%" }, week.map { compact ? "\(long.prefix(1)) \($0)%" : "\(long) \($0)%" }]
+            .compactMap { $0 }.joined(separator: " · ")
     }
 }
 
@@ -267,7 +269,7 @@ struct LimitsRow: View {
                 ForEach(withLimits) { spirit in
                     HStack(spacing: 5) {
                         SpiritView(id: spirit.id, busy: spirit.busy, size: 14)
-                        Text(LimitChip.text(five: spirit.lim5, week: spirit.lim7))
+                        Text(LimitChip.text(five: spirit.lim5, week: spirit.lim7, label: spirit.limw))
                             .font(.system(size: 12, weight: .medium)).monospacedDigit()
                             .foregroundStyle(
                                 max(spirit.lim5 ?? 0, spirit.lim7 ?? 0) >= LimitChip.hot

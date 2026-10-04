@@ -266,7 +266,7 @@ struct AgentsWidgetView: View {
                     if let first {
                         // Шаг, а если его нет - лимит подписки: и то и другое
                         // полезнее слова «работает» (владелец 03.10.2026).
-                        let fallback = LimitChip.text(five: first.lim5, week: first.lim7)
+                        let fallback = LimitChip.text(five: first.lim5, week: first.lim7, label: first.limw)
                         Caption(text: first.step.isEmpty ? fallback : first.step, color: DashTheme.ink2, size: 12)
                     }
                 case .systemMedium:
