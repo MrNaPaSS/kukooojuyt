@@ -86,7 +86,8 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
     private var speaker = "jarvis"  // чей голос сейчас звучит - его дух в островке
     private var decision: IslandAttributes.Decision?  // что ждёт решения владельца - первым на замке
     private var busyWere: Set<String> = []  // кто работал прошлым опросом - «закончил» в уведомление
-    static let agents = ["jarvis", "server", "pc"]
+    // Кому можно говорить - встроенные и добавленные с ПК (Clawdbot и др.): GlassesAgents.all из реестра
+    // сервера (владелец 04.10.2026: «не могу надиктовать Clawdbot» - был зашит список из трёх).
     private let recordURL = FileManager.default.temporaryDirectory.appendingPathComponent("glasses.m4a")
 
     // MARK: включение
@@ -240,14 +241,14 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
 
     /// Кнопка духа в островке и «Сказать Джарвис»: нажал - запись этому агенту, ещё раз - отправить.
     func talk(to agent: String) {
-        guard ensureEnabled(), Self.agents.contains(agent) else { return }
+        guard ensureEnabled(), GlassesAgents.all.contains(agent) else { return }
         if machine.state == .idle { target = agent }
         press(keepTarget: true)
     }
 
     /// Удержание кнопки агента на странице: прижал - запись, отпустил - отправлено.
     func hold(_ agent: String, down: Bool) {
-        guard ensureEnabled(), Self.agents.contains(agent) else { return }
+        guard ensureEnabled(), GlassesAgents.all.contains(agent) else { return }
         switch (down, machine.state) {
         case (true, .idle):
             target = agent
@@ -551,7 +552,8 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         } else if herKey != lastHer, !herKey.isEmpty, let last = hers.last?["text"] as? String {
             if !muted.contains("jarvis") { speak(last, by: "jarvis") }
         } else if speakAgents, theirKey != lastTheirs, !theirKey.isEmpty, let last = theirs.last?["text"] as? String {
-            let who = theirs.last?["agent"] as? String == "server" ? "server" : "pc"
+            let raw = theirs.last?["agent"] as? String ?? "pc"
+            let who = GlassesAgents.all.contains(raw) ? raw : "pc"  // ответ Clawdbot - его голосом и духом
             if !muted.contains(who) { speak(last, by: who) }  // целиком, как на ПК
         }
     }
