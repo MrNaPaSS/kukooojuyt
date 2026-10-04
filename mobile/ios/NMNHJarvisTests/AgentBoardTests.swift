@@ -56,6 +56,19 @@ final class AgentBoardTests: XCTestCase {
         XCTAssertNil(IslandBuilder.decision(from: [:]))
     }
 
+    func testAddedAgentsFromRegistry() {
+        let state: [String: Any] = ["agents": [["id": "jarvis", "name": "Джарвис", "color": "#ee4dd9"],
+                                               ["id": "server2", "name": "Server 2", "color": "#3ddc97"]],
+                                    "work": ["server2": ["busy": true, "secs": 30]]]
+        let spirits = IslandBuilder.spirits(from: state, now: Date())
+        XCTAssertEqual(spirits.map(\.id), ["jarvis", "server", "pc", "server2"])
+        XCTAssertEqual(spirits.last?.name, "Server 2")
+        XCTAssertEqual(spirits.last?.busy, true)
+        XCTAssertEqual(GlassesAgents.name("server2"), "Server 2")
+        XCTAssertEqual(GlassesAgents.short("server2"), "S2")
+        GlassesAgents.learn([])
+    }
+
     func testPairLinkParsed() {
         let link = Pairing.parse(URL(string: "jarvis://pair?code=AB12-CD_x9&api=https%3A%2F%2Fapi.example.com")!)
         XCTAssertEqual(link?.code, "AB12-CD_x9")

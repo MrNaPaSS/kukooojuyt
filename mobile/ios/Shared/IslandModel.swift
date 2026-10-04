@@ -69,6 +69,8 @@ struct IslandAttributes: ActivityAttributes {
         // «успеет ли он доделать» возникает именно тогда, когда он занят.
         var lim5: Int? = nil
         var lim7: Int? = nil
+        var title: String? = nil  // имя добавленного агента (Server 2); у встроенных - nil
+        var hex: String? = nil    // его цвет «#rrggbb»
     }
 
     struct Todo: Codable, Hashable {
@@ -80,13 +82,7 @@ struct IslandAttributes: ActivityAttributes {
 }
 
 extension IslandAttributes.Spirit {
-    var name: String {
-        switch id {
-        case "jarvis": return "Джарвис"
-        case "server": return "Server PC"
-        default: return "Local PC"
-        }
-    }
+    var name: String { title ?? GlassesAgents.name(id) }
 }
 
 /// Касание островка - план того, кто работает (сначала агент с планом, потом любой занятый).
@@ -107,7 +103,13 @@ enum IslandBuilder {
         // Последнее действие каждого агента («Bash: …») - шаг, когда плана нет (владелец 03.10.2026:
         // на замке было «план не заявлен», а в чате видно, чем он занят).
         let chat = state["chat"] as? [[String: Any]] ?? []
-        return order.map { id in
+        // Добавленные с ПК агенты (реестр pult_agents) - после встроенных, со своим именем и цветом.
+        let registry = (state["agents"] as? [[String: Any]] ?? []).compactMap { a -> (String, String, String)? in
+            guard let id = a["id"] as? String, !order.contains(id) else { return nil }
+            return (id, a["name"] as? String ?? id, a["color"] as? String ?? "#8e939c")
+        }
+        let all = order + registry.map(\.0)
+        let spirits = all.map { id -> IslandAttributes.Spirit in
             let entry = work[id] ?? [:]
             let busy = entry["busy"] as? Bool ?? false
             let secs = (entry["secs"] as? NSNumber)?.doubleValue ?? 0
@@ -128,8 +130,12 @@ enum IslandBuilder {
                                            step: current ?? (busy ? lastAction(chat, of: id) : ""),
                                            todo: busy ? window(todo) : nil,
                                            lim5: (lim.first as? NSNumber)?.intValue,
-                                           lim7: (lim.count > 2 ? lim[2] as? NSNumber : nil)?.intValue)
+                                           lim7: (lim.count > 2 ? lim[2] as? NSNumber : nil)?.intValue,
+                                           title: registry.first { $0.0 == id }?.1,
+                                           hex: registry.first { $0.0 == id }?.2)
         }
+        GlassesAgents.learn(spirits)
+        return spirits
     }
 
     /// Что ждёт решения владельца: поле decision ответа агентов. Текст короче - у Live Activity

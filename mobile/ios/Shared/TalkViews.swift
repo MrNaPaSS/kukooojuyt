@@ -84,13 +84,41 @@ struct TalkState: Codable {
     var since: Date?
 }
 
+/// Агенты: три встроенных и добавленные владельцем с ПК (реестр pult_agents, 04.10.2026). Добавленные
+/// приходят с сервера в поле agents; в островок - внутри духов (Spirit.title, Spirit.hex), поэтому
+/// расширение узнаёт их из того же состояния (learn).
 enum GlassesAgents {
-    static let all = ["jarvis", "server", "pc"]
+    static let builtin = ["jarvis", "server", "pc"]
+    struct Extra: Codable, Hashable {
+        var id: String
+        var name: String
+        var hex: String
+    }
+    static var extra: [Extra] = []
+    static var all: [String] { builtin + extra.map(\.id) }
+
     static func name(_ id: String) -> String {
         switch id {
         case "jarvis": return "Джарвис"
         case "server": return "Server PC"
-        default: return "Local PC"
+        case "pc": return "Local PC"
+        default: return extra.first { $0.id == id }?.name ?? id
         }
+    }
+
+    /// Короткое имя, когда агентов больше четырёх: «Server 2» -> «S2».
+    static func short(_ id: String) -> String {
+        let full = name(id)
+        let words = full.split(separator: " ")
+        guard words.count > 1 else { return String(full.prefix(4)) }
+        return words.map { String($0.prefix(1)) }.joined().uppercased()
+            + (words.last.map { $0.allSatisfy(\.isNumber) ? String($0) : "" } ?? "")
+    }
+
+    /// Запомнить добавленных из духов состояния - и в приложении, и в расширении островка.
+    static func learn(_ spirits: [IslandAttributes.Spirit]) {
+        let found = spirits.filter { !builtin.contains($0.id) }
+            .map { Extra(id: $0.id, name: $0.title ?? $0.id, hex: $0.hex ?? "#8e939c") }
+        if found != extra { extra = found }
     }
 }

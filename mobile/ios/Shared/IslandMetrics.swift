@@ -11,6 +11,7 @@ struct IslandMetrics: View {
     var stale = false  // Live Activity устарела (staleDate прошёл) - итог выкладки больше не показываем
 
     var body: some View {
+        let _ = GlassesAgents.learn(state.spirits)  // расширение узнаёт добавленных агентов из состояния
         VStack(alignment: .leading, spacing: 8) {
             // Пока кто-то работает, всё место отдано его плану (владелец
             // 03.10.2026): духи-кнопки и метрики сервера ничего не говорят о
@@ -380,7 +381,7 @@ struct AgentPills: View {
     let state: IslandAttributes.ContentState
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(GlassesAgents.all, id: \.self) { id in
+            ForEach(state.spirits.map(\.id), id: \.self) { id in
                 let live = state.mode == .recording && state.recFor == id
                 let busy = state.spirits.first { $0.id == id }?.busy ?? false
                 // Только дух и цветное имя, без цветных капсул (владелец 03.10.2026); запись - красная точка.
@@ -388,7 +389,7 @@ struct AgentPills: View {
                     HStack(spacing: 5) {
                         SpiritView(id: id, busy: busy || live, size: 17)
                         if live { Circle().fill(DashTheme.down).frame(width: 6, height: 6) }
-                        Text(live ? "Отправить" : GlassesAgents.name(id))
+                        Text(live ? "Отправить" : state.spirits.count > 4 ? GlassesAgents.short(id) : GlassesAgents.name(id))
                             .font(.system(size: 13, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
                             .foregroundStyle(SpiritView.color(id))
                         if busy && !live {

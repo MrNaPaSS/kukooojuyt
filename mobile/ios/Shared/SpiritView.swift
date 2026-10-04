@@ -12,8 +12,19 @@ struct SpiritView: View {
         switch id {
         case "jarvis": return Color(red: 0.93, green: 0.30, blue: 0.85)  // фуксия
         case "server": return Color(red: 1.00, green: 0.55, blue: 0.15)  // оранжевый
-        default: return Color(red: 0.30, green: 0.72, blue: 1.00)        // голубой
+        case "pc": return Color(red: 0.30, green: 0.72, blue: 1.00)      // голубой
+        default:
+            return GlassesAgents.extra.first { $0.id == id }.flatMap { hex($0.hex) }
+                ?? Color(red: 0.56, green: 0.58, blue: 0.61)
         }
+    }
+
+    /// «#3ddc97» -> цвет; не цвет - nil.
+    static func hex(_ text: String) -> Color? {
+        let clean = text.hasPrefix("#") ? String(text.dropFirst()) : text
+        guard clean.count == 6, let v = UInt32(clean, radix: 16) else { return nil }
+        return Color(red: Double((v >> 16) & 0xff) / 255, green: Double((v >> 8) & 0xff) / 255,
+                     blue: Double(v & 0xff) / 255)
     }
 
     var body: some View {
