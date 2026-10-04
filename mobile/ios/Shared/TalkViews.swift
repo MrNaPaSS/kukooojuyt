@@ -111,8 +111,8 @@ enum GlassesAgents {
         let full = name(id)
         let words = full.split(separator: " ")
         guard words.count > 1 else { return String(full.prefix(4)) }
-        return words.map { String($0.prefix(1)) }.joined().uppercased()
-            + (words.last.map { $0.allSatisfy(\.isNumber) ? String($0) : "" } ?? "")
+        // Буквы - по первой, число - целиком: «Server 2» -> «S2», «Server PC 12» -> «SP12».
+        return words.map { $0.allSatisfy(\.isNumber) ? String($0) : String($0.prefix(1)).uppercased() }.joined()
     }
 
     /// Запомнить добавленных из духов состояния - и в приложении, и в расширении островка.
