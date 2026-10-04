@@ -35,6 +35,26 @@ struct ServerWidget: Widget {
     }
 }
 
+// MARK: Нагрузка серверов кольцами - два виджета (04.10.2026)
+
+struct HostMainWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "nmnh.host.main", provider: PultProvider()) { HostWidgetView(entry: $0, index: 0) }
+            .configurationDisplayName("Сервер терминала")
+            .description("ЦП, ОЗУ и диск сервера с терминалом - кольцами.")
+            .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+struct HostAgentsWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "nmnh.host.agents", provider: PultProvider()) { HostWidgetView(entry: $0, index: 1) }
+            .configurationDisplayName("Сервер агентов")
+            .description("ЦП, ОЗУ и диск сервера, где живут Server PC, Clawdbot и Codex.")
+            .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
 // MARK: Агенты
 
 struct AgentsWidget: Widget {

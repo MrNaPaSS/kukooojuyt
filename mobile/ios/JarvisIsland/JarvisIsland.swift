@@ -16,6 +16,15 @@ struct JarvisIslandBundle: WidgetBundle {
         PultWidget()
         LockMoneyWidget()
         LockServerWidget()
+        HostWidgets().body  // больше 10 в одном списке WidgetBundle не берёт
+    }
+}
+
+/// Нагрузка двух серверов кольцами (04.10.2026) - отдельной группой: список бандла упёрся в 10.
+struct HostWidgets: WidgetBundle {
+    var body: some Widget {
+        HostMainWidget()
+        HostAgentsWidget()
     }
 }
 

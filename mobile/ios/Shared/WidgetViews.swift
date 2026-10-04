@@ -600,3 +600,68 @@ struct LockServerView: View {
         .lockBackground()
     }
 }
+
+// MARK: Нагрузка сервера кольцами (04.10.2026: «два виджета - сервер с терминалом и с агентами»)
+
+/// Кольцо как на ПК: бирюзовое, жёлтое от 70%, красное от 85%; в середине проценты и подпись.
+struct LoadRing: View {
+    let label: String
+    let value: Int?
+    let note: String
+    var size: CGFloat = 64
+    private var tint: Color {
+        guard let v = value else { return DashTheme.faint }
+        return v >= 85 ? DashTheme.down : v >= 70 ? DashTheme.warn : Color(red: 0.0, green: 0.86, blue: 0.86)
+    }
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                Circle().stroke(Color.white.opacity(0.12), lineWidth: size * 0.1)
+                Circle().trim(from: 0, to: CGFloat(min(100, max(0, value ?? 0))) / 100)
+                    .stroke(tint, style: StrokeStyle(lineWidth: size * 0.1, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                VStack(spacing: 0) {
+                    Text(value.map { "\($0)%" } ?? "-").font(.system(size: size * 0.26, weight: .bold)).foregroundStyle(tint)
+                    Text(label).font(.system(size: size * 0.15, weight: .medium)).foregroundStyle(DashTheme.ink2)
+                }
+            }
+            .frame(width: size, height: size)
+            if !note.isEmpty {
+                Text(note).font(.system(size: 10, weight: .medium)).foregroundStyle(DashTheme.label).lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+        }
+    }
+}
+
+struct HostWidgetView: View {
+    let entry: PultEntry
+    /// 0 - сервер терминала, 1 - сервер агентов (порядок pult_hosts.hosts).
+    let index: Int
+    var forced: WidgetFamily?
+    var body: some View {
+        let hosts = entry.dash.hosts
+        let host = index < hosts.count ? hosts[index] : Dash.Host(name: index == 0 ? "Сервер терминала" : "Сервер агентов")
+        Sized(forced: forced) { family in
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text(host.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(DashTheme.ink)
+                    Spacer()
+                    if !host.online { Caption(text: "нет связи", color: DashTheme.down, size: 11) }
+                }
+                Spacer(minLength: 6)
+                let small = family == .systemSmall
+                HStack(alignment: .top, spacing: small ? 4 : 14) {
+                    LoadRing(label: "ЦП", value: host.cpu, note: small ? "" : host.cpu_note, size: small ? 42 : 64)
+                    LoadRing(label: "ОЗУ", value: host.ram, note: small ? "" : host.ram_note, size: small ? 42 : 64)
+                    LoadRing(label: "Диск", value: host.disk, note: small ? "" : host.disk_note, size: small ? 42 : 64)
+                }
+                .frame(maxWidth: .infinity)
+                Spacer(minLength: 0)
+                Freshness(entry: entry)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .pultBackground()
+    }
+}

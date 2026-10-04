@@ -12,6 +12,13 @@ struct Dash: Codable, Hashable {
         var down: [String] = []
         var err: Int = 0, fail: Int = 0, bk: Int = -1, up: Int = 0
     }
+    /// Нагрузка сервера кольцами (pult_hosts.card): сервер терминала и сервер агентов (04.10.2026).
+    struct Host: Codable, Hashable {
+        var name: String = ""
+        var online: Bool = false
+        var cpu: Int?, ram: Int?, disk: Int?
+        var cpu_note: String = "", ram_note: String = "", disk_note: String = ""
+    }
     struct Trades: Codable, Hashable { var n: Int = 0, pnl: Double = 0, win: Int = 0, open: Int = 0 }
     struct People: Codable, Hashable { var online: Int = 0, total: Int = 0, day: Int = 0 }
     struct Tasks: Codable, Hashable { var w: Int = 0, q: Int = 0, a: Int = 0, d: Int = 0, now: String = "" }
@@ -41,6 +48,7 @@ struct Dash: Codable, Hashable {
     var alerts: [String] = []
     var notes: [Note] = []
     var watch = Watch()
+    var hosts: [Host] = []
 
     static func decode(_ data: Data) -> Dash? { try? JSONDecoder().decode(Dash.self, from: data) }
 
@@ -65,7 +73,11 @@ struct Dash: Codable, Hashable {
         notes: [],
         watch: Watch(open: 3, ex: [.init(n: "binance", ms: 0, worst: 0, err: 0, streams: 12, drops: 0),
                                    .init(n: "weex", ms: 262, worst: 422, err: 0, streams: 0, drops: 0)],
-                     lag: 457, lagRole: "market", api: 200, site: 200))
+                     lag: 457, lagRole: "market", api: 200, site: 200),
+        hosts: [Host(name: "Сервер терминала", online: true, cpu: 42, ram: 49, disk: 32,
+                     cpu_note: "0.83 на 2 ядра", ram_note: "1.86 из 3.8 ГБ", disk_note: "11.9 из 37.7 ГБ"),
+                Host(name: "Сервер агентов", online: true, cpu: 12, ram: 23, disk: 25,
+                     cpu_note: "0.24 на 2 ядра", ram_note: "0.85 из 3.8 ГБ", disk_note: "9.3 из 37.7 ГБ")])
 }
 
 // Codable с пропущенными полями: сервер старее приложения не должен ломать островок.
@@ -84,8 +96,9 @@ extension Dash { init(from d: Decoder) throws { let c = try d.container(keyedBy:
     tasks = (try? c.decode(Tasks.self, forKey: .tasks)) ?? Tasks(); goals = (try? c.decode([Goal].self, forKey: .goals)) ?? []
     cal = (try? c.decode([[String]].self, forKey: .cal)) ?? []; alerts = (try? c.decode([String].self, forKey: .alerts)) ?? []
     notes = (try? c.decode([Note].self, forKey: .notes)) ?? []
-    watch = (try? c.decode(Watch.self, forKey: .watch)) ?? Watch() }
-    private enum K: String, CodingKey { case t, biz, srv, trades, people, tasks, goals, cal, alerts, notes, watch } }
+    watch = (try? c.decode(Watch.self, forKey: .watch)) ?? Watch()
+    hosts = (try? c.decode([Host].self, forKey: .hosts)) ?? [] }
+    private enum K: String, CodingKey { case t, biz, srv, trades, people, tasks, goals, cal, alerts, notes, watch, hosts } }
 
 /// Общая папка приложения и расширения (App Group): виджеты читают то, что приложение получило в фоне.
 enum SharedStore {
