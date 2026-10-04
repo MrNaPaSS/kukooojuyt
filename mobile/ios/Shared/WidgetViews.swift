@@ -677,8 +677,8 @@ struct HostsWidgetView: View {
         let hosts = entry.dash.hosts.isEmpty
             ? [Dash.Host(name: "Сервер терминала"), Dash.Host(name: "Сервер агентов")] : entry.dash.hosts
         Sized(forced: forced) { family in
-            let large = family == .systemLarge
-            VStack(alignment: .leading, spacing: large ? 14 : 6) {
+            VStack(alignment: .leading, spacing: family == .systemLarge ? 14 : 6) {
+                let large = family == .systemLarge
                 ForEach(Array(hosts.prefix(2).enumerated()), id: \.offset) { _, host in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
