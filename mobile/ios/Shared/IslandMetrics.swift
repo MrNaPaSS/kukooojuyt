@@ -32,8 +32,9 @@ struct IslandMetrics: View {
                 SpeakerCard(state: state)
             } else {
                 AgentPills(state: state)
+                // Лимиты агентов с главной карточки убраны (владелец 05.10.2026: «много места занимают») -
+                // они в чатах агентов и в их окнах на замке.
                 if let d = state.dash {
-                    LimitsRow(spirits: state.spirits)
                     if d.hosts.isEmpty {
                         ServerRow(srv: d.srv)  // сервер старее приложения - одна строка, как раньше
                     } else {
@@ -41,7 +42,6 @@ struct IslandMetrics: View {
                     }
                     third(d)
                 } else {
-                    LimitsRow(spirits: state.spirits)
                     Caption(text: "Жду сводку с сервера…")
                 }
             }
@@ -463,14 +463,15 @@ struct HostLine: View {
                 .lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 4)
             if host.online {
+                // Ровные столбцы (владелец 05.10.2026: «показатели друг под другом»): каждая цифра - своей
+                // ширины ячейка, отметка служб - своё место и у сервера агентов (там пустое).
                 value("CPU", host.cpu)
                 value("ОЗУ", host.ram)
                 value("Диск", host.disk)
-                if let services {
-                    Text(services == 0 ? "✓" : "стоит \(services)")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(services == 0 ? DashTheme.money : DashTheme.down)
-                }
+                Text(services.map { $0 == 0 ? "✓" : "!\($0)" } ?? "")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle((services ?? 0) == 0 ? DashTheme.money : DashTheme.down)
+                    .frame(width: 18, alignment: .trailing)
             } else {
                 Text("нет связи").font(.system(size: 12, weight: .semibold)).foregroundStyle(DashTheme.down)
             }
@@ -484,6 +485,7 @@ struct HostLine: View {
             Text(percent.map { "\($0)%" } ?? "-").foregroundStyle(HostLine.tint(percent))
         }
         .font(.system(size: 12, weight: .semibold)).monospacedDigit()
+        .frame(width: 62, alignment: .leading)
     }
 
     static func tint(_ p: Int?) -> Color {

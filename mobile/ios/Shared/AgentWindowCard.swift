@@ -16,8 +16,8 @@ struct AgentProgressText: View {
     }
 }
 
-/// Карточка агента: дух и имя, «N/M» с полоской, текущий шаг с живым таймером, следующие - одной
-/// строкой. Готовые шаги не перечисляем: их число уже в «N/M».
+/// Карточка агента: дух и имя, «N/M» с полоской и туду списком (до четырёх строк вокруг текущего шага).
+/// Плана нет - текущий шаг с живым таймером.
 struct AgentWindowCard: View {
     let state: AgentAttributes.ContentState
     var stale = false
@@ -39,6 +39,14 @@ struct AgentWindowCard: View {
             Bar(progress: Double(spirit.done) / Double(max(1, spirit.total)), tint: state.finished ? DashTheme.money : tint)
             if state.finished {
                 Text("План выполнен").font(.system(size: 13, weight: .semibold)).foregroundStyle(DashTheme.money)
+            } else if let todo = spirit.todo, !todo.isEmpty {
+                // Туду списком, как раньше в общей карточке (владелец 05.10.2026: «как и ранее с тодо, а не только
+                // с текущим шагом»): сделанное, текущий с таймером и следующие.
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(Array(todo.prefix(island ? 2 : WorkCard.maxLines).enumerated()), id: \.offset) { _, item in
+                        TodoLine(item: item, tint: tint)
+                    }
+                }
             } else {
                 current(spirit, tint: tint)
                 upcoming(spirit)

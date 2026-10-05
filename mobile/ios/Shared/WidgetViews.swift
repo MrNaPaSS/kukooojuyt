@@ -83,9 +83,8 @@ extension View {
 struct Freshness: View {
     let entry: PultEntry
     var body: some View {
-        if !entry.fresh {
-            Caption(text: "образец · открой приложение", color: DashTheme.faint, size: 10)
-        } else if entry.dash.t > 0, Date().timeIntervalSince1970 - entry.dash.t > 20 * 60 {
+        // Без «образец · открой приложение» (владелец 05.10.2026): виджет и так покажет, что есть.
+        if entry.fresh, entry.dash.t > 0, Date().timeIntervalSince1970 - entry.dash.t > 20 * 60 {
             (Text("цифры ") + Text(Date(timeIntervalSince1970: entry.dash.t), style: .relative) + Text(" назад"))
                 .font(.system(size: 10, weight: .medium)).foregroundStyle(DashTheme.faint).lineLimit(1)
         }
