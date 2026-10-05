@@ -5,9 +5,13 @@ struct Spirits: View {
     let spirits: [IslandAttributes.Spirit]
     let size: CGFloat
     var body: some View {
-        HStack(spacing: -size * 0.18) {
-            ForEach(spirits) { SpiritView(id: $0.id, busy: $0.busy, size: size) }
+        // Больше четырёх агентов - ряд ужимается (владелец 05.10.2026: «на старых виджетах не видно новых агентов»):
+        // шесть духов по 30 точек не влезали в маленький виджет и обрезались справа.
+        let fit = spirits.count > 4 ? size * 4.4 / CGFloat(spirits.count) : size
+        HStack(spacing: -fit * 0.18) {
+            ForEach(spirits) { SpiritView(id: $0.id, busy: $0.busy, size: fit) }
         }
+        .fixedSize()
     }
 }
 
@@ -62,8 +66,25 @@ struct AgentsPage: View {
     var mode: IslandAttributes.Mode = .quiet
     var size: CGFloat = 22
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(spirits) { SpiritRow(spirit: $0, mode: mode, size: size) }
+        if spirits.count > 4 {
+            // Пять агентов и больше - в две колонки: в средний виджет шесть строк по высоте не влезали
+            // (владелец 05.10.2026: «на старых виджетах не видно новых агентов»).
+            let half = (spirits.count + 1) / 2
+            HStack(alignment: .top, spacing: 10) {
+                column(Array(spirits.prefix(half)))
+                column(Array(spirits.dropFirst(half)))
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(spirits) { SpiritRow(spirit: $0, mode: mode, size: size) }
+            }
         }
+    }
+
+    private func column(_ part: [IslandAttributes.Spirit]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(part) { SpiritRow(spirit: $0, mode: mode, size: size * 0.8) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

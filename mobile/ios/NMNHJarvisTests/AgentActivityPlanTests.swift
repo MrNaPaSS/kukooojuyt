@@ -32,10 +32,11 @@ final class AgentActivityPlanTests: XCTestCase {
         XCTAssertEqual(AgentActivityPlan.plan(spirits: [], open: ["clawdbot"]), [.close("clawdbot")])
     }
 
-    func testPlanWithoutStepsIsNoWindow() {
-        // Работает без плана - его покажет общая карточка, отдельного окна нет.
+    func testWorkingWithoutPlanStillGetsWindow() {
+        // 05.10.2026: все работающие - на замке; без плана окно показывает текущий шаг. Джарвис - в общей карточке.
         XCTAssertEqual(AgentActivityPlan.plan(spirits: [spirit("server", total: 0)], open: ["server"]),
-                       [.close("server")])
+                       [.update("server")])
+        XCTAssertEqual(AgentActivityPlan.plan(spirits: [spirit("jarvis", total: 0)], open: []), [])
     }
 
     func testLimitGivesPlacesToFreshestAndKeepsOpenOnes() {

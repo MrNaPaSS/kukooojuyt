@@ -10,6 +10,8 @@ struct AgentProgressText: View {
         let spirit = state.spirit
         if state.finished {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(DashTheme.money)
+        } else if spirit.total == 0 {
+            EmptyView()  // без плана - нечего считать
         } else {
             Text("\(spirit.done)/\(spirit.total)").monospacedDigit().foregroundStyle(SpiritView.color(spirit.id))
         }
@@ -36,7 +38,9 @@ struct AgentWindowCard: View {
                 if !island { LimitChip(spirit: spirit, size: 11, compact: true).fixedSize() }
                 AgentProgressText(state: state).font(.system(size: 15, weight: .bold, design: .rounded))
             }
-            Bar(progress: Double(spirit.done) / Double(max(1, spirit.total)), tint: state.finished ? DashTheme.money : tint)
+            if spirit.total > 0 || state.finished {
+                Bar(progress: Double(spirit.done) / Double(max(1, spirit.total)), tint: state.finished ? DashTheme.money : tint)
+            }
             if state.finished {
                 Text("План выполнен").font(.system(size: 13, weight: .semibold)).foregroundStyle(DashTheme.money)
             } else if let todo = spirit.todo, !todo.isEmpty {

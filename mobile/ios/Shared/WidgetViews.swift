@@ -278,15 +278,18 @@ struct AgentsWidgetView: View {
                         Caption(text: busy.isEmpty ? "все ждут" : "\(busy.count) работают")
                     }
                     Spacer(minLength: 14)
-                    VStack(spacing: 10) {
+                    // Шесть агентов и больше - карточки плотнее: по 12 точек отступа они не влезали по высоте,
+                    // и последние агенты пропадали снизу (05.10.2026).
+                    let many = entry.spirits.count > 4
+                    VStack(spacing: many ? 5 : 10) {
                         ForEach(entry.spirits) { spirit in
-                            VStack(alignment: .leading, spacing: 8) {
-                                SpiritRow(spirit: spirit, size: 24)
+                            VStack(alignment: .leading, spacing: many ? 4 : 8) {
+                                SpiritRow(spirit: spirit, size: many ? 20 : 24)
                                 if spirit.busy, spirit.total > 0 {
                                     Bar(progress: Double(spirit.done) / Double(spirit.total), tint: SpiritView.color(spirit.id))
                                 }
                             }
-                            .padding(12)
+                            .padding(many ? 7 : 12)
                             .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .fill(Color.white.opacity(spirit.busy ? 0.08 : 0.04)))  // стекло, без цвета агента
                         }
