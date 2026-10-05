@@ -33,6 +33,9 @@ targets:
           UIColorName: ""
         UIBackgroundModes: [audio]
         NSMicrophoneUsageDescription: Voice for Jarvis - recording from the glasses or phone microphone.
+        # Скрепка в чате - «Снять фото» и галерея (05.10.2026: без этих строк iOS закрывала приложение).
+        NSCameraUsageDescription: Take a photo to send to an agent in the chat.
+        NSPhotoLibraryUsageDescription: Pick a photo to send to an agent in the chat.
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UIStatusBarStyle: UIStatusBarStyleLightContent
