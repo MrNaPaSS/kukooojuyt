@@ -108,7 +108,11 @@ struct WidgetAuth: Codable {
 
 /// Общая папка приложения и расширения (App Group): виджеты читают то, что приложение получило в фоне.
 enum SharedStore {
-    static let group = "group.trade.nmnh.jarvis"
+    /// Установка через AltServer (бесплатный Apple ID) переписывает имя группы под учётку и кладёт настоящее в
+    /// Info.plist ключом ALTAppGroups. По старому имени папка не находилась: приложение и виджеты писали каждое в
+    /// свою, и виджеты экрана блокировки показывали образец ($12.40) вместо цифр (06.10.2026).
+    static let group = (Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String])?.first
+        ?? "group.trade.nmnh.jarvis"
 
     private static var folder: URL {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
