@@ -289,6 +289,9 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
     // MARK: запись и ответ
 
     private func startRecording() {
+        // Запись - тишина: озвучка ответа иначе попадала в микрофон и в текст сообщения (владелец 06.10.2026:
+        // «Это второй из трёх прогонов» в начале его голосового). Для всех агентов - запись общая.
+        hush()
         do {
             try recordSession()
             chime(Tones.listen)
@@ -441,6 +444,7 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
 
     /// Прочитать ответ целиком: куски по предложениям, первый звучит сразу, следующий готовится заранее.
     private func speak(_ text: String, by agent: String) {
+        if case .recording = machine.state { return }  // идёт запись - не озвучивать, ответ виден в чате
         let parts = Self.pieces(text)
         guard !parts.isEmpty else { return }
         said = text
