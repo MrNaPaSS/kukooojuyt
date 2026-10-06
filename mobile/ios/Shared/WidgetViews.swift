@@ -21,8 +21,24 @@ struct PultProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PultEntry>) -> Void) {
-        let entry = Self.current() ?? Self.sample
-        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(15 * 60))))
+        // Свежая сводка - самим виджетом по ключу виджетов: приложение могло уснуть, и файл застыл бы
+        // (06.10.2026). Нет ключа или сети - то, что есть в файле.
+        Task {
+            await Self.fetch()
+            let entry = Self.current() ?? Self.sample
+            completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(15 * 60))))
+        }
+    }
+
+    static func fetch() async {
+        guard let auth = SharedStore.load(WidgetAuth.self, from: "widget.json"), let base = URL(string: auth.base),
+              let url = URL(string: "api/widget/dash", relativeTo: base) else { return }
+        var request = URLRequest(url: url, timeoutInterval: 10)
+        request.setValue(auth.key, forHTTPHeaderField: "X-Widget-Key")
+        request.setValue("1", forHTTPHeaderField: "ngrok-skip-browser-warning")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200, let dash = Dash.decode(data) else { return }
+        SharedStore.save(dash, as: "dash.json")
     }
 
     static func current() -> PultEntry? {

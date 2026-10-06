@@ -546,6 +546,12 @@ final class GlassesVoice: NSObject, AVAudioPlayerDelegate {
         // Островок и экран блокировки листают страницы: агенты, деньги, сервер, сделки, задачи.
         if dash != nil { page = DashPage(rawValue: (page.rawValue + 1) % DashPage.allCases.count) ?? .agents }
         if let dash { SharedStore.save(dash, as: "dash.json") }
+        // Ключ виджетов - один раз: дальше виджеты экрана блокировки забирают сводку сами, даже когда приложение
+        // спит (06.10.2026: прибыль на экране блокировки застывала).
+        if SharedStore.load(WidgetAuth.self, from: "widget.json") == nil, let raw = Keychain.load("base"),
+           let key = try? await api.widgetKey() {
+            SharedStore.save(WidgetAuth(base: raw, key: key), as: "widget.json")
+        }
         SharedStore.save(spirits, as: "spirits.json")
         // Виджеты - не чаще раза в 5 минут: у iOS дневной бюджет их обновлений.
         if Date().timeIntervalSince(widgetsAt) > 300 {

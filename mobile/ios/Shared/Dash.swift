@@ -100,6 +100,12 @@ extension Dash { init(from d: Decoder) throws { let c = try d.container(keyedBy:
     hosts = (try? c.decode([Host].self, forKey: .hosts)) ?? [] }
     private enum K: String, CodingKey { case t, biz, srv, trades, people, tasks, goals, cal, alerts, notes, watch, hosts } }
 
+/// Адрес сервера и ключ виджетов - в общей папке: по ним виджет сам забирает сводку (06.10.2026).
+struct WidgetAuth: Codable {
+    let base: String
+    let key: String
+}
+
 /// Общая папка приложения и расширения (App Group): виджеты читают то, что приложение получило в фоне.
 enum SharedStore {
     static let group = "group.trade.nmnh.jarvis"

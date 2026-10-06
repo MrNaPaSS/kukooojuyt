@@ -58,6 +58,15 @@ final class ServerAPI {
         return dash
     }
 
+    /// Ключ виджетов (06.10.2026): виджеты экрана блокировки сами забирают сводку, когда приложение спит.
+    /// Умеет только чтение сводки (backend/api/widget.py).
+    func widgetKey() async throws -> String {
+        let data = try await call("api/admin/agents/widget-key", method: "POST")
+        let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        guard let key = reply?["key"] as? String, !key.isEmpty else { throw Failure.server(0) }
+        return key
+    }
+
     /// Решение владельца из уведомления или островка: выкладка или вариант ответа (pult_decision).
     func decide(kind: String, id: String, pick: Int) async throws -> String {
         let body = try JSONSerialization.data(withJSONObject: ["kind": kind, "id": id, "pick": pick])
