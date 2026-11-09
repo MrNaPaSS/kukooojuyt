@@ -6,6 +6,7 @@ struct Dash: Codable, Hashable {
         var c1: Double = 0, c7: Double = 0, day: Double = 0
         var rr: Double = 0, plan: Double = 0, goal: Double = 0
         var refs: Int = 0, ref30: Int = 0, subs: Int = 0, usdt30: Double = 0
+        var ca: Double = 0  // когда обновилась комиссия: сводка свежая, а отчёт WEEX мог застыть (09.11.2026)
     }
     struct Srv: Codable, Hashable {
         var cpu: Int = 0, ram: Int = 0, disk: Int = 0
@@ -56,6 +57,8 @@ struct Dash: Codable, Hashable {
     var dayProgress: Double { biz.day > 0 ? biz.c1 / biz.day : 0 }
     /// Годовой темп против плана.
     var paceProgress: Double { biz.plan > 0 ? biz.rr / biz.plan : 0 }
+    /// Комиссия не обновлялась дольше трёх часов (норма - раз в час).
+    func commissionStale(at now: Date = Date()) -> Bool { biz.ca > 0 && now.timeIntervalSince1970 - biz.ca > 3 * 3600 }
 
     /// Демо и превью: выдуманные цифры, не с живого сервера (исходники приложения собираются в
     /// открытом репозитории - настоящих денег, целей и дел здесь быть не должно, 03.10.2026).
@@ -86,8 +89,9 @@ extension Dash.Biz { init(from d: Decoder) throws { let c = try d.container(keye
     day = (try? c.decode(Double.self, forKey: .day)) ?? 0; rr = (try? c.decode(Double.self, forKey: .rr)) ?? 0
     plan = (try? c.decode(Double.self, forKey: .plan)) ?? 0; goal = (try? c.decode(Double.self, forKey: .goal)) ?? 0
     refs = (try? c.decode(Int.self, forKey: .refs)) ?? 0; ref30 = (try? c.decode(Int.self, forKey: .ref30)) ?? 0
-    subs = (try? c.decode(Int.self, forKey: .subs)) ?? 0; usdt30 = (try? c.decode(Double.self, forKey: .usdt30)) ?? 0 }
-    private enum K: String, CodingKey { case c1, c7, day, rr, plan, goal, refs, ref30, subs, usdt30 } }
+    subs = (try? c.decode(Int.self, forKey: .subs)) ?? 0; usdt30 = (try? c.decode(Double.self, forKey: .usdt30)) ?? 0
+    ca = (try? c.decode(Double.self, forKey: .ca)) ?? 0 }
+    private enum K: String, CodingKey { case c1, c7, day, rr, plan, goal, refs, ref30, subs, usdt30, ca } }
 
 extension Dash { init(from d: Decoder) throws { let c = try d.container(keyedBy: K.self)
     t = (try? c.decode(Double.self, forKey: .t)) ?? 0

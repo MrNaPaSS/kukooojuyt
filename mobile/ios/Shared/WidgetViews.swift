@@ -580,13 +580,19 @@ struct LockMoneyView: View {
                 }
                 .gaugeStyle(.accessoryCircular)
             case .accessoryInline:
-                Text("NMNH \(Money.text(d.biz.c1)) из \(Money.text(d.biz.day))")
+                Text(d.commissionStale(at: entry.date) ? "NMNH \(Money.text(d.biz.c1)) · старая цифра"
+                                                       : "NMNH \(Money.text(d.biz.c1)) из \(Money.text(d.biz.day))")
             default:
                 VStack(alignment: .leading, spacing: 1) {
                     Text("NMNH · комиссия").font(.system(size: 11, weight: .semibold))
                     Text(Money.text(d.biz.c1)).font(.system(size: 20, weight: .bold))
-                    Text("план дня \(Money.text(d.biz.day)) · \(d.alerts.isEmpty ? "всё ок" : "⚠ \(d.alerts.count)")")
-                        .font(.system(size: 11))
+                    if d.commissionStale(at: entry.date) {
+                        (Text("старая цифра · ") + Text(Date(timeIntervalSince1970: d.biz.ca), style: .relative))
+                            .font(.system(size: 11))
+                    } else {
+                        Text("план дня \(Money.text(d.biz.day)) · \(d.alerts.isEmpty ? "всё ок" : "⚠ \(d.alerts.count)")")
+                            .font(.system(size: 11))
+                    }
                 }
             }
         }
