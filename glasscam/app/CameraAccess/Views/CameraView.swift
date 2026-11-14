@@ -224,6 +224,12 @@ struct CameraView: View {
       VStack(alignment: .leading, spacing: 6) {
         statusChip(label: "Session", value: viewModel.sessionStateText, active: viewModel.isSessionActive, present: viewModel.hasSession)
         statusChip(label: "Stream", value: viewModel.streamStateText, active: viewModel.isStreaming, present: viewModel.hasStream)
+        // GlassCam: entitlements left after re-signing (Wi-Fi streaming needs Hotspot).
+        ForEach(EntitlementsDiag.report(), id: \.0) { name, ok in
+          Text("\(ok ? "OK" : "НЕТ") \(name.replacingOccurrences(of: "com.apple.developer.networking.", with: ""))")
+            .font(.system(size: 11, design: .monospaced))
+            .foregroundStyle(ok ? .green : .red)
+        }
       }
 
       Spacer()
