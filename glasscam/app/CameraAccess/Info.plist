@@ -65,6 +65,11 @@
 	<array>
 		<string>_bonjour._tcp</string>
 	</array>
+	<!-- GlassCam: Bluetooth Classic (medium link) for streaming without Wi-Fi hotspot entitlement -->
+	<key>UISupportedExternalAccessoryProtocols</key>
+	<array>
+		<string>com.meta.ar.wearable</string>
+	</array>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Needed to connect to Meta AI Glasses</string>
 	<!-- End required section for Device Access Toolkit Apps -->
