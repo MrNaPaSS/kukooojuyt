@@ -243,8 +243,7 @@ final class HotspotBridge {
     let fields = stringIvars(of: configuration)
     let pass = fields.first { $0.key.lowercased().contains("pass") }?.value
     let ssid = configuration.ssid
-    let details = fields.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: "
-")
+    let details = fields.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: "\n")
     NSLog("[GlassCam] hotspot apply ssid=\(ssid) fields=\(fields.keys.sorted())")
     Task { @MainActor in
       let bridge = HotspotBridge.shared
