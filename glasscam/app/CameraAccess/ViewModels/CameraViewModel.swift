@@ -282,8 +282,8 @@ final class CameraViewModel {
     // AudioCaptureHandler, so the SDK stream needs only the public video config (no audio codec).
     let config = StreamConfiguration(
       videoCodec: VideoCodec.hvc1,
-      resolution: StreamingResolution.low,
-      frameRate: 24
+      resolution: StreamingResolution.high,
+      frameRate: 30
     )
 
     do {
