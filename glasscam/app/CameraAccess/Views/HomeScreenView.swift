@@ -14,7 +14,9 @@
 //
 
 import ExternalAccessory
+import CoreMedia
 import MWDATCore
+import Network
 import NetworkExtension
 import ObjectiveC
 import OSLog
@@ -317,5 +319,132 @@ struct HotspotPromptView: View {
       .clipShape(RoundedRectangle(cornerRadius: 16))
       .padding(16)
     }
+  }
+}
+
+// MARK: - GlassCam: HEVC to the PC
+
+/// TCP server on port 8899. The PC reaches it over the USB cable through usbmux and gets
+/// an Annex-B HEVC elementary stream (parameter sets before every keyframe), no re-encode.
+final class PCStreamServer: @unchecked Sendable {
+  static let shared = PCStreamServer()
+  static let port: UInt16 = 8899
+
+  private let queue = DispatchQueue(label: "glasscam.pcstream")
+  private var listener: NWListener?
+  private var clients: [ObjectIdentifier: NWConnection] = [:]
+  private var needsKeyframe: Set<ObjectIdentifier> = []
+
+  func start() {
+    queue.async { [self] in
+      guard listener == nil else { return }
+      do {
+        let params = NWParameters.tcp
+        params.allowLocalEndpointReuse = true
+        let l = try NWListener(using: params, on: NWEndpoint.Port(rawValue: Self.port)!)
+        l.newConnectionHandler = { [weak self] conn in self?.accept(conn) }
+        l.stateUpdateHandler = { state in NSLog("[GlassCam] pc listener \(state)") }
+        l.start(queue: queue)
+        listener = l
+      } catch {
+        NSLog("[GlassCam] pc listener failed: \(error)")
+      }
+    }
+  }
+
+  var clientCount: Int { queue.sync { clients.count } }
+
+  private func accept(_ conn: NWConnection) {
+    let id = ObjectIdentifier(conn)
+    conn.stateUpdateHandler = { [weak self] state in
+      switch state {
+      case .failed, .cancelled:
+        self?.queue.async { self?.clients[id] = nil; self?.needsKeyframe.remove(id) }
+      default: break
+      }
+    }
+    conn.start(queue: queue)
+    clients[id] = conn
+    needsKeyframe.insert(id)
+    NSLog("[GlassCam] pc client connected, total \(clients.count)")
+  }
+
+  func send(_ sample: CMSampleBuffer) {
+    guard let payload = Self.annexB(sample) else { return }
+    queue.async { [self] in
+      for (id, conn) in clients {
+        if needsKeyframe.contains(id) {
+          guard payload.isKeyframe else { continue }
+          needsKeyframe.remove(id)
+        }
+        conn.send(content: payload.data, completion: .contentProcessed { error in
+          if error != nil { conn.cancel() }
+        })
+      }
+    }
+  }
+
+  struct Payload: Sendable {
+    let data: Data
+    let isKeyframe: Bool
+  }
+
+  static func annexB(_ sample: CMSampleBuffer) -> Payload? {
+    guard let fd = CMSampleBufferGetFormatDescription(sample),
+      let block = CMSampleBufferGetDataBuffer(sample)
+    else { return nil }
+    let startCode: [UInt8] = [0, 0, 0, 1]
+    var out = Data()
+
+    var isKey = true
+    if let atts = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: false) as NSArray?,
+      let first = atts.firstObject as? NSDictionary,
+      let notSync = first[kCMSampleAttachmentKey_NotSync as String] as? Bool, notSync
+    {
+      isKey = false
+    }
+
+    var headerLen: Int32 = 4
+    if isKey {
+      var count = 0
+      CMVideoFormatDescriptionGetHEVCParameterSetAtIndex(
+        fd, parameterSetIndex: 0, parameterSetPointerOut: nil, parameterSetSizeOut: nil,
+        parameterSetCountOut: &count, nalUnitHeaderLengthOut: &headerLen)
+      for i in 0..<count {
+        var ptr: UnsafePointer<UInt8>?
+        var size = 0
+        if CMVideoFormatDescriptionGetHEVCParameterSetAtIndex(
+          fd, parameterSetIndex: i, parameterSetPointerOut: &ptr, parameterSetSizeOut: &size,
+          parameterSetCountOut: nil, nalUnitHeaderLengthOut: nil) == noErr, let ptr
+        {
+          out.append(contentsOf: startCode)
+          out.append(ptr, count: size)
+        }
+      }
+    } else {
+      CMVideoFormatDescriptionGetHEVCParameterSetAtIndex(
+        fd, parameterSetIndex: 0, parameterSetPointerOut: nil, parameterSetSizeOut: nil,
+        parameterSetCountOut: nil, nalUnitHeaderLengthOut: &headerLen)
+    }
+
+    let length = CMBlockBufferGetDataLength(block)
+    var raw = Data(count: length)
+    let status = raw.withUnsafeMutableBytes { buf in
+      CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: length, destination: buf.baseAddress!)
+    }
+    guard status == noErr else { return nil }
+
+    let hl = Int(headerLen)
+    var offset = 0
+    while offset + hl <= raw.count {
+      var nalLen = 0
+      for k in 0..<hl { nalLen = (nalLen << 8) | Int(raw[raw.startIndex + offset + k]) }
+      offset += hl
+      guard nalLen > 0, offset + nalLen <= raw.count else { break }
+      out.append(contentsOf: startCode)
+      out.append(raw[(raw.startIndex + offset)..<(raw.startIndex + offset + nalLen)])
+      offset += nalLen
+    }
+    return Payload(data: out, isKeyframe: isKey)
   }
 }

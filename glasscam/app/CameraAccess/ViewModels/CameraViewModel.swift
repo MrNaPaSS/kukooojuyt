@@ -500,6 +500,9 @@ final class CameraViewModel {
       // keeps writing while the app is backgrounded.
       self.appendVideoFrame(frame)
 
+      // GlassCam: raw HEVC to the PC over USB (usbmux -> port 8899).
+      PCStreamServer.shared.send(frame.sampleBuffer)
+
       // Decode the compressed hvc1 frame for preview off the main actor.
       let previewImage = self.videoFrameDecoder.decode(frame.sampleBuffer)
 

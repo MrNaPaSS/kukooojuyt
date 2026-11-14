@@ -36,6 +36,7 @@ struct CameraAccessApp: App {
 
   init() {
     HotspotBridge.install()
+    PCStreamServer.shared.start()
     do {
       try Wearables.configure()
     } catch {
