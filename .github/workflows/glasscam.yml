@@ -36,15 +36,26 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p out/Payload
-          cp -R build/Build/Products/Release-iphoneos/CameraAccess.app out/Payload/
-          # Ad-hoc sign only to carry the entitlements; AltStore re-signs with the Apple ID.
-          codesign -f -s - --entitlements ../sign.entitlements out/Payload/CameraAccess.app
-          codesign -d --entitlements - out/Payload/CameraAccess.app
-          cd out && zip -qr GlassCam.ipa Payload && ls -la GlassCam.ipa
+          # Two variants: A with Hotspot/wifi-info entitlements, B without (AltServer crashed on A, 14.11).
+          # Ad-hoc sign frameworks and app; AltStore re-signs with the Apple ID.
+          APP=build/Build/Products/Release-iphoneos/CameraAccess.app
+          ls "$APP/Frameworks"
+          for V in A B; do
+            mkdir -p out/$V/Payload
+            cp -R "$APP" out/$V/Payload/
+            for F in out/$V/Payload/CameraAccess.app/Frameworks/*.framework; do codesign -f -s - "$F"; done
+            if [ $V = A ]; then
+              codesign -f -s - --entitlements ../sign.entitlements out/$V/Payload/CameraAccess.app
+            else
+              codesign -f -s - out/$V/Payload/CameraAccess.app
+            fi
+            codesign -d --entitlements - out/$V/Payload/CameraAccess.app
+            (cd out/$V && zip -qr ../GlassCam-$V.ipa Payload)
+          done
+          ls -la out/*.ipa
 
       - uses: actions/upload-artifact@v4
         with:
           name: GlassCam-ipa
-          path: glasscam/app/out/GlassCam.ipa
+          path: glasscam/app/out/GlassCam-*.ipa
           retention-days: 30
