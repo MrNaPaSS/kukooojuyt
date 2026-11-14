@@ -13,8 +13,11 @@
 // This view is displayed when the app is not yet registered.
 //
 
+import ExternalAccessory
 import MWDATCore
+import OSLog
 import SwiftUI
+import UIKit
 
 struct HomeScreenView: View {
   var viewModel: WearablesViewModel
@@ -122,5 +125,55 @@ struct EntitlementsDiagView: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color.black.opacity(0.05))
     .clipShape(RoundedRectangle(cornerRadius: 10))
+  }
+}
+
+/// GlassCam: Bluetooth accessories visible to the app and the recent log of this process
+/// (SDK messages included), so a failed preview can be diagnosed on the phone.
+enum DiagLog {
+  static func accessories() -> String {
+    let list = EAAccessoryManager.shared().connectedAccessories
+    if list.isEmpty { return "EA: нет аксессуаров" }
+    return list.map { "EA: \($0.name) [\($0.protocolStrings.joined(separator: ","))] conn=\($0.isConnected)" }
+      .joined(separator: "\n")
+  }
+
+  static func recent(minutes: Double = 10, limit: Int = 400) -> String {
+    do {
+      let store = try OSLogStore(scope: .currentProcessIdentifier)
+      let pos = store.position(date: Date().addingTimeInterval(-minutes * 60))
+      let lines = try store.getEntries(at: pos)
+        .compactMap { $0 as? OSLogEntryLog }
+        .map { "\($0.date.formatted(date: .omitted, time: .standard)) [\($0.category)] \($0.composedMessage)" }
+      return lines.suffix(limit).joined(separator: "\n")
+    } catch {
+      return "Лог недоступен: \(error.localizedDescription)"
+    }
+  }
+}
+
+struct DiagLogView: View {
+  @State private var text = "Загрузка..."
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        Text(text)
+          .font(.system(size: 10, design: .monospaced))
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(8)
+      }
+      .navigationTitle("Лог")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) { Button("Закрыть") { dismiss() } }
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Копировать") { UIPasteboard.general.string = text }
+        }
+      }
+      .task { text = DiagLog.accessories() + "\n\n" + DiagLog.recent() }
+    }
   }
 }

@@ -26,6 +26,7 @@ struct CameraView: View {
   @Bindable var wearablesVM: WearablesViewModel
   @State private var showSettingsMenu: Bool = false
   @State private var isLaunchingUpdate: Bool = false
+  @State private var showDiagLog: Bool = false
 
   init(wearables: WearablesInterface, wearablesVM: WearablesViewModel) {
     self._viewModel = State(wrappedValue: CameraViewModel(wearables: wearables))
@@ -230,6 +231,13 @@ struct CameraView: View {
             .font(.system(size: 11, design: .monospaced))
             .foregroundStyle(ok ? .green : .red)
         }
+        Button("ЛОГ") { showDiagLog = true }
+          .font(.system(size: 13, weight: .bold, design: .monospaced))
+          .padding(.horizontal, 10)
+          .padding(.vertical, 4)
+          .background(Color.white.opacity(0.2))
+          .clipShape(Capsule())
+          .sheet(isPresented: $showDiagLog) { DiagLogView() }
       }
 
       Spacer()
