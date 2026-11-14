@@ -421,6 +421,9 @@ final class CameraViewModel {
   }
 
   private func handleDidEnterBackground() {
+    // GlassCam: keep the session alive in background - the user switches to Settings
+    // to join the glasses Wi-Fi by hand (see HotspotBridge).
+    return
     guard hasSession, hasStream, sessionState != .stopping else { return }
 
     beginBackgroundStopErrorSuppression()

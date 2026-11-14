@@ -15,6 +15,8 @@
 
 import ExternalAccessory
 import MWDATCore
+import NetworkExtension
+import ObjectiveC
 import OSLog
 import SwiftUI
 import UIKit
@@ -174,6 +176,147 @@ struct DiagLogView: View {
         }
       }
       .task { text = DiagLog.accessories() + "\n\n" + DiagLog.recent() }
+    }
+  }
+}
+
+// MARK: - GlassCam: manual Wi-Fi join instead of the Hotspot entitlement
+
+/// Box for a completion handler crossing threads (Swift 6 strict concurrency).
+struct HotspotCompletion: @unchecked Sendable {
+  let call: (Error?) -> Void
+}
+
+/// The SDK asks NEHotspotConfigurationManager to join the glasses' SoftAP; a free Apple ID
+/// has no Hotspot entitlement, so that call fails. We swap the method: show SSID and password,
+/// the user joins in Settings by hand, then "Я подключился" reports success to the SDK.
+@MainActor @Observable
+final class HotspotBridge {
+  static let shared = HotspotBridge()
+
+  var ssid: String?
+  var passphrase: String?
+  var details: String = ""
+  var waiting = false
+  @ObservationIgnored private var completion: HotspotCompletion?
+
+  nonisolated static func install() {
+    swap(NEHotspotConfigurationManager.self,
+         #selector(NEHotspotConfigurationManager.apply(_:completionHandler:)),
+         #selector(NEHotspotConfigurationManager.gc_apply(_:completionHandler:)))
+    swap(NEHotspotConfigurationManager.self,
+         #selector(NEHotspotConfigurationManager.getConfiguredSSIDs(completionHandler:)),
+         #selector(NEHotspotConfigurationManager.gc_getConfiguredSSIDs(completionHandler:)))
+  }
+
+  nonisolated private static func swap(_ cls: AnyClass, _ original: Selector, _ replacement: Selector) {
+    guard let a = class_getInstanceMethod(cls, original),
+      let b = class_getInstanceMethod(cls, replacement)
+    else {
+      NSLog("[GlassCam] swizzle failed for \(original)")
+      return
+    }
+    method_exchangeImplementations(a, b)
+    NSLog("[GlassCam] swizzled \(original)")
+  }
+
+  /// String ivars of the configuration (passphrase is not public API).
+  nonisolated static func stringIvars(of object: AnyObject) -> [String: String] {
+    var result: [String: String] = [:]
+    var count: UInt32 = 0
+    guard let ivars = class_copyIvarList(type(of: object), &count) else { return result }
+    defer { free(ivars) }
+    for i in 0..<Int(count) {
+      let ivar = ivars[i]
+      guard let cname = ivar_getName(ivar), let enc = ivar_getTypeEncoding(ivar),
+        String(cString: enc).hasPrefix("@")
+      else { continue }
+      if let value = object_getIvar(object, ivar) as? String {
+        result[String(cString: cname)] = value
+      }
+    }
+    return result
+  }
+
+  /// Called from the swizzled apply on any thread; only Sendable values cross into the main actor.
+  nonisolated static func intercept(_ configuration: NEHotspotConfiguration, completion: HotspotCompletion?) {
+    let fields = stringIvars(of: configuration)
+    let pass = fields.first { $0.key.lowercased().contains("pass") }?.value
+    let ssid = configuration.ssid
+    let details = fields.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: "
+")
+    NSLog("[GlassCam] hotspot apply ssid=\(ssid) fields=\(fields.keys.sorted())")
+    Task { @MainActor in
+      let bridge = HotspotBridge.shared
+      bridge.ssid = ssid
+      bridge.passphrase = pass
+      bridge.details = details
+      bridge.completion = completion
+      bridge.waiting = true
+    }
+  }
+
+  func confirmJoined() {
+    waiting = false
+    completion?.call(nil)
+    completion = nil
+  }
+
+  func cancel() {
+    waiting = false
+    completion?.call(NSError(domain: NEHotspotConfigurationErrorDomain, code: NEHotspotConfigurationError.userDenied.rawValue, userInfo: nil))
+    completion = nil
+  }
+
+}
+
+extension NEHotspotConfigurationManager {
+  @objc dynamic func gc_apply(_ configuration: NEHotspotConfiguration, completionHandler: ((Error?) -> Void)?) {
+    HotspotBridge.intercept(configuration, completion: completionHandler.map { HotspotCompletion(call: $0) })
+  }
+
+  @objc dynamic func gc_getConfiguredSSIDs(completionHandler: @escaping ([String]) -> Void) {
+    let handler = SSIDHandler(call: completionHandler)
+    Task { @MainActor in handler.call(HotspotBridge.shared.ssid.map { [$0] } ?? []) }
+  }
+}
+
+struct SSIDHandler: @unchecked Sendable {
+  let call: ([String]) -> Void
+}
+
+struct HotspotPromptView: View {
+  @State private var bridge = HotspotBridge.shared
+
+  var body: some View {
+    if bridge.waiting {
+      VStack(alignment: .leading, spacing: 10) {
+        Text("Подключи iPhone к Wi-Fi очков")
+          .font(.headline)
+        Text("Настройки → Wi-Fi → эта сеть (если её нет в списке - «Другая»).")
+          .font(.subheadline)
+        Group {
+          Text("Сеть: \(bridge.ssid ?? "-")")
+          Text("Пароль: \(bridge.passphrase ?? "не найден")")
+        }
+        .font(.system(size: 15, design: .monospaced))
+        .textSelection(.enabled)
+        HStack {
+          Button("Копировать пароль") { UIPasteboard.general.string = bridge.passphrase }
+            .buttonStyle(.bordered)
+          Button("Я подключился") { bridge.confirmJoined() }
+            .buttonStyle(.borderedProminent)
+        }
+        Button("Отмена", role: .cancel) { bridge.cancel() }
+        Text(bridge.details)
+          .font(.system(size: 9, design: .monospaced))
+          .foregroundStyle(.secondary)
+          .textSelection(.enabled)
+      }
+      .padding(16)
+      .background(.regularMaterial)
+      .clipShape(RoundedRectangle(cornerRadius: 16))
+      .padding(16)
     }
   }
 }

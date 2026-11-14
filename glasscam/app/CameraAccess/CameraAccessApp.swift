@@ -35,6 +35,7 @@ struct CameraAccessApp: App {
   @State private var wearablesViewModel: WearablesViewModel
 
   init() {
+    HotspotBridge.install()
     do {
       try Wearables.configure()
     } catch {
@@ -78,6 +79,8 @@ struct CameraAccessApp: App {
         } message: {
           Text(wearablesViewModel.errorMessage)
         }
+        // GlassCam: manual join of the glasses Wi-Fi (no Hotspot entitlement on free Apple ID)
+        .overlay { HotspotPromptView() }
         #if DEBUG
       .sheet(isPresented: $showDebugMenu) {
         MockDeviceKitView(viewModel: mockDeviceKitViewModel)
