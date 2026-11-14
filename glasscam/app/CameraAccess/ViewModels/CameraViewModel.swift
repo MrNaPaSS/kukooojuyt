@@ -283,7 +283,7 @@ final class CameraViewModel {
     let config = StreamConfiguration(
       videoCodec: VideoCodec.hvc1,
       resolution: StreamingResolution.high,
-      frameRate: 30
+      frameRate: 15
     )
 
     do {
